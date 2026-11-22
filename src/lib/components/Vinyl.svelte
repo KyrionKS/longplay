@@ -156,11 +156,11 @@
   }
 
   .vinyl.single {
-    inset: 23%;
+    inset: 22.5%;
   }
 
   .vinyl.single .label {
-    width: 46%;
+    width: 49%;
   }
 
   .vinyl.single .title {
@@ -232,7 +232,7 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 36%;
+    width: 33.5%;
     aspect-ratio: 1;
     transform: translate(-50%, -50%);
     border-radius: 50%;

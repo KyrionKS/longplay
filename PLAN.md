@@ -304,6 +304,9 @@ Pausen 0.
 Priorisiert nach Wirkung, nicht nach Aufwand:
 
 1. **Tonarm in der Rille:** Winkel folgt der Wiedergabe, Nadel sitzt sichtbar im Band.
+   Echte Plattenmaße: 12″ 302 mm, Label 100 mm, Musik 146→60 mm, Lead-in 5 mm,
+   Auslauf bis 54 mm; 7″ 175 mm, Label 86 mm, Musik 84→45 mm. Zwischen den Tracks
+   liegt ein 1,6–1,8 mm breites Land.
 2. **Material:** Label-Abrieb am Rand, leicht vergilbtes Papier, Ring-Abdruck des
    Vinyls auf der Hülle, abgestoßene Sleeve-Ecken.
 3. **Tote Rille:** Matrix-Nummer und Presswerks-Kürzel eingeritzt, Staub und feine

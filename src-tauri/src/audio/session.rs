@@ -611,7 +611,7 @@ mod tests {
         wait_until(|| session.state().loaded);
         let first = session.state();
         assert!(
-            (first.stylus_radius - 132.0).abs() < 1.0,
+            (first.stylus_radius - 146.0).abs() < 1.0,
             "first groove at {} mm",
             first.stylus_radius
         );

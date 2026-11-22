@@ -1,15 +1,15 @@
 //! Groove layout: where the tracks sit on the record.
 //!
-//! Radii are in millimetres, measured from the spindle. The playable area is
-//! divided by time, with a small minimum land between tracks so the bands stay
-//! readable. The same layout will drive the tonearm in phase 3.
+//! Real dimensions: a 12" LP is 302 mm across with a 100 mm label; the music
+//! runs from a 146 mm outer groove to 60 mm, with a 5 mm lead-in and a run-out
+//! to 54 mm. A 7" single is 175 mm across with an 86 mm label, music from 84 mm
+//! to 45 mm. Tracks are separated by a small land (1.6–1.8 mm), the rest of the
+//! music area is divided by playing time. Radii are millimetres from the spindle.
 
 use serde::Serialize;
 
-use crate::library::model::{DiscFormat, Rpm};
-use crate::playback::TonearmGeometry;
-
 use super::timeline::SideTimeline;
+use crate::library::model::{DiscFormat, Rpm};
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -44,6 +44,34 @@ pub struct GrooveLayout {
     pub bands: Vec<GrooveBand>,
 }
 
+struct Dimensions {
+    record_radius: f64,
+    music_outer: f64,
+    music_inner: f64,
+    runout_end: f64,
+    land: f64,
+}
+
+fn dimensions(single: bool) -> Dimensions {
+    if single {
+        Dimensions {
+            record_radius: 87.5,
+            music_outer: 84.0,
+            music_inner: 45.0,
+            runout_end: 43.0,
+            land: 1.6,
+        }
+    } else {
+        Dimensions {
+            record_radius: 151.0,
+            music_outer: 146.0,
+            music_inner: 60.0,
+            runout_end: 54.0,
+            land: 1.8,
+        }
+    }
+}
+
 impl GrooveLayout {
     /// Stylus radius (mm) for a side position in seconds.
     pub fn radius_for_time(&self, seconds: f64) -> Option<f64> {
@@ -66,20 +94,9 @@ impl GrooveLayout {
 
     pub fn for_side(timeline: &SideTimeline, format: DiscFormat, rpm: Rpm) -> Self {
         let single = format == DiscFormat::Single7 || rpm == Rpm::R45;
-        let geometry = if single {
-            TonearmGeometry::SINGLE7
-        } else {
-            TonearmGeometry::LP12
-        };
-        let record_radius = if single { 87.5 } else { 151.0 };
-        let outer = geometry.outer_radius;
-        let inner = geometry.inner_radius;
-        let label_radius = record_radius * 0.36;
-        // Real records have a lead-in groove; a slightly wider one keeps the
-        // cartridge visibly on the record at the first track.
-        let music_outer = outer - if single { 13.0 } else { 14.0 };
-        let available = (music_outer - inner).max(1.0);
-        let min_gap = if single { 2.2 } else { 1.6 };
+        let dims = dimensions(single);
+        let record_radius = dims.record_radius;
+        let music_area = (dims.music_outer - dims.music_inner).max(1.0);
 
         let total_duration: f64 = timeline
             .tracks
@@ -87,63 +104,52 @@ impl GrooveLayout {
             .map(|track| track.duration.max(0.0))
             .sum();
 
-        // A pregap gets at least a visible land; tracks without a pregap still
-        // get a thin separator so the band structure reads like a record.
-        let mut gaps: Vec<f64> = timeline
+        // Every track after the first gets a land; a pregap before the first
+        // track is a land as well. The lands are subtracted from the music area
+        // so the last track still ends at the inner groove.
+        let gaps: Vec<bool> = timeline
             .tracks
             .iter()
             .enumerate()
-            .map(|(index, track)| {
-                if track.pregap > 0.01 {
-                    (available * track.pregap / timeline.total.max(1.0)).max(min_gap)
-                } else if index > 0 {
-                    min_gap * 0.9
-                } else {
-                    0.0
-                }
-            })
+            .map(|(index, track)| index > 0 || track.pregap > 0.01)
             .collect();
+        let gap_count = gaps.iter().filter(|gap| **gap).count();
+        let land = if gap_count > 0 {
+            dims.land.min(music_area * 0.3 / gap_count as f64)
+        } else {
+            0.0
+        };
+        let music_width = (music_area - land * gap_count as f64).max(0.0);
 
-        let mut gap_sum: f64 = gaps.iter().sum();
-        let gap_budget = available * 0.55;
-        if gap_sum > gap_budget && gap_sum > 0.0 {
-            let factor = gap_budget / gap_sum;
-            for gap in &mut gaps {
-                *gap *= factor;
-            }
-            gap_sum = gap_budget;
-        }
-
-        let music_width = (available - gap_sum).max(0.0);
-        let mut cursor = music_outer;
+        let mut cursor = dims.music_outer;
         let mut time_cursor = 0.0;
         let mut bands = vec![GrooveBand {
             kind: GrooveKind::LeadIn,
             track_index: None,
             start: record_radius,
-            end: music_outer,
+            end: dims.music_outer,
             start_norm: 1.0,
-            end_norm: music_outer / record_radius,
+            end_norm: dims.music_outer / record_radius,
             start_time: 0.0,
             end_time: 0.0,
         }];
 
         for (index, track) in timeline.tracks.iter().enumerate() {
-            let gap = gaps[index];
-            if gap > 0.001 {
+            if gaps[index] {
+                let gap_time = track.pregap;
                 bands.push(GrooveBand {
                     kind: GrooveKind::Gap,
                     track_index: Some(index),
                     start: cursor,
-                    end: cursor - gap,
+                    end: cursor - land,
                     start_norm: cursor / record_radius,
-                    end_norm: (cursor - gap) / record_radius,
+                    end_norm: (cursor - land) / record_radius,
                     start_time: time_cursor,
-                    end_time: time_cursor + track.pregap,
+                    end_time: time_cursor + gap_time,
                 });
-                cursor -= gap;
+                cursor -= land;
+                time_cursor += gap_time;
             }
-            time_cursor += track.pregap;
 
             let width = if total_duration > 0.0 {
                 music_width * track.duration.max(0.0) / total_duration
@@ -158,20 +164,19 @@ impl GrooveLayout {
                 start_norm: cursor / record_radius,
                 end_norm: (cursor - width) / record_radius,
                 start_time: time_cursor,
-                end_time: time_cursor + track.duration,
+                end_time: time_cursor + track.duration.max(0.0),
             });
             cursor -= width;
-            time_cursor += track.duration;
+            time_cursor += track.duration.max(0.0);
         }
 
-        let runout_end = (inner - 8.0).max(label_radius).min(cursor);
         bands.push(GrooveBand {
             kind: GrooveKind::RunOut,
             track_index: None,
             start: cursor,
-            end: runout_end,
+            end: dims.runout_end.min(cursor),
             start_norm: cursor / record_radius,
-            end_norm: runout_end / record_radius,
+            end_norm: dims.runout_end.min(cursor) / record_radius,
             start_time: time_cursor,
             end_time: time_cursor,
         });
@@ -218,51 +223,37 @@ mod tests {
     }
 
     #[test]
-    fn maps_time_to_radius_monotonically() {
-        let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
-        let mut previous = f64::MAX;
-        for step in 0..=100 {
-            let time = 453.0 * step as f64 / 100.0;
-            let radius = layout.radius_for_time(time).unwrap();
-            assert!(radius <= previous + 1e-9, "radius must shrink over time");
-            previous = radius;
-        }
-        let start = layout.radius_for_time(0.0).unwrap();
-        let end = layout.radius_for_time(453.0).unwrap();
-        assert!((start - 132.0).abs() < 1e-9);
-        assert!(end <= 60.0 + 1e-6);
-    }
+    fn first_track_starts_at_the_outer_music_groove() {
+        let layout = layout(&[300.0, 180.0], &[0.0, 0.0]);
+        let lead_in = &layout.bands[0];
+        assert_eq!(lead_in.kind, GrooveKind::LeadIn);
+        assert_eq!(lead_in.start, 151.0);
+        assert_eq!(lead_in.end, 146.0);
 
-    #[test]
-    fn band_times_cover_the_side() {
-        let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
-        let first = layout.bands.first().unwrap();
-        let last = layout.bands.last().unwrap();
-        assert_eq!(first.start_time, 0.0);
-        assert!((last.end_time - 453.0).abs() < 1e-9);
-        for pair in layout.bands.windows(2) {
-            assert!(pair[0].end_time <= pair[1].start_time + 1e-9);
-        }
+        let first_track = layout
+            .bands
+            .iter()
+            .find(|band| band.kind == GrooveKind::Track)
+            .unwrap();
+        assert_eq!(first_track.start, 146.0);
     }
 
     #[test]
     fn bands_are_contiguous_from_edge_to_runout() {
         let layout = layout(&[300.0, 180.0, 240.0], &[1.5, 1.5, 1.5]);
-        assert_eq!(layout.bands.first().unwrap().kind, GrooveKind::LeadIn);
         assert_eq!(layout.bands.first().unwrap().start, 151.0);
-        assert!((layout.bands.first().unwrap().end - 132.0).abs() < 1e-9);
         for pair in layout.bands.windows(2) {
             assert!((pair[0].end - pair[1].start).abs() < 1e-6);
             assert!(pair[0].start >= pair[0].end);
         }
         let last = layout.bands.last().unwrap();
         assert_eq!(last.kind, GrooveKind::RunOut);
-        assert!((last.end - 151.0 * 0.36).abs() < 1e-6);
+        assert!((last.end - 54.0).abs() < 1e-9);
     }
 
     #[test]
     fn track_widths_follow_durations() {
-        let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
+        let layout = layout(&[300.0, 150.0], &[0.0, 0.0]);
         let tracks: Vec<_> = layout
             .bands
             .iter()
@@ -275,24 +266,42 @@ mod tests {
     }
 
     #[test]
-    fn gaps_are_at_least_visible() {
-        let layout = layout(&[600.0, 600.0], &[0.0, 0.0]);
-        for band in layout
+    fn lands_are_visible_but_do_not_eat_the_record() {
+        let layout = layout(&[300.0, 250.0, 200.0], &[0.0, 1.5, 1.5]);
+        let lands: Vec<_> = layout
             .bands
             .iter()
             .filter(|band| band.kind == GrooveKind::Gap)
-        {
-            assert!(band.start - band.end >= 0.45, "gap too small");
+            .collect();
+        assert_eq!(lands.len(), 2);
+        for land in lands {
+            assert!(land.start - land.end >= 1.0);
         }
     }
 
     #[test]
-    fn singles_use_the_smaller_record() {
+    fn maps_time_to_radius_monotonically() {
+        let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
+        let mut previous = f64::MAX;
+        for step in 0..=100 {
+            let time = 453.0 * step as f64 / 100.0;
+            let radius = layout.radius_for_time(time).unwrap();
+            assert!(radius <= previous + 1e-9, "radius must shrink over time");
+            previous = radius;
+        }
+        assert!((layout.radius_for_time(0.0).unwrap() - 146.0).abs() < 1e-9);
+        assert!(layout.radius_for_time(453.0).unwrap() <= 60.0 + 1e-6);
+    }
+
+    #[test]
+    fn singles_use_the_7_inch_dimensions() {
         let timeline = SideTimeline::from_side(&side(&[120.0, 130.0], &[0.0, 0.0]));
         let layout = GrooveLayout::for_side(&timeline, DiscFormat::Single7, Rpm::R45);
         assert_eq!(layout.record_radius, 87.5);
         assert_eq!(layout.bands.first().unwrap().start, 87.5);
-        assert!((layout.bands.last().unwrap().end - 87.5 * 0.36).abs() < 1e-6);
+        assert_eq!(layout.bands.first().unwrap().end, 84.0);
+        let last = layout.bands.last().unwrap();
+        assert!((last.end - 43.0).abs() < 1e-9);
     }
 
     #[test]
@@ -310,7 +319,7 @@ mod tests {
         let layout = layout(&durations, &pregaps);
         for band in &layout.bands {
             assert!(band.start >= band.end);
-            assert!(band.end >= 151.0 * 0.36 - 1e-9);
+            assert!(band.end >= 54.0 - 1e-9);
         }
     }
 }

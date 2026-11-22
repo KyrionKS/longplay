@@ -458,7 +458,7 @@
         />
         <circle cx={pivotX} cy={pivotY} r={Math.max(3, armLengthPx * 0.012)} fill="#0d0d0d" />
 
-        <g transform={`translate(${stylusX} ${stylusY}) rotate(${phiDeg})`}>
+        <g transform={`translate(${stylusX} ${stylusY}) rotate(${phiDeg + 16})`}>
           <rect
             x={-armLengthPx * 0.055}
             y={-armLengthPx * 0.024}
@@ -475,7 +475,8 @@
             rx="2"
             fill="#b5342a"
           />
-          <circle r={Math.max(1.6, armLengthPx * 0.006)} fill="#e8e8e8" />
+          <circle r={Math.max(1.8, armLengthPx * 0.007)} fill="#f2f2f2" />
+          <circle r={Math.max(3.2, armLengthPx * 0.012)} fill="rgba(0,0,0,0.28)" />
         </g>
       </g>
     </svg>

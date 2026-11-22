@@ -23,8 +23,9 @@ Auf macOS geht es über CoreAudio (cpal) mit dem **Standard-Ausgabegerät**; Ste
 auf den ersten beiden Kanälen, weitere Ausgänge eines Interfaces bleiben still. Es gibt
 bewusst keinen Geräte-Picker: was macOS als Standardausgabe führt, wird benutzt.
 
-Die Rillen sind kein Dekor: Ein Layout teilt die Spielfläche zeitlich in Track-Bänder,
-Pausen und Auslaufrille. Dasselbe Layout wird in Phase 3 den Tonarm führen.
+Die Rillen sind kein Dekor: Ein Layout teilt die Spielfläche nach echten Plattenmaßen
+(12″: Musik 146→60 mm bei 5 mm Lead-in; 7″: 84→45 mm) in Track-Bänder, Land und
+Auslaufrille. Dasselbe Layout führt den Tonarm.
 Auf Linux läuft zum Entwickeln ein Echtzeit-Null-Sink, weil hier die ALSA-Header fehlen.
 
 ## Prinzipien
