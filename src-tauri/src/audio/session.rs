@@ -1,7 +1,13 @@
-//! Playback session: loads sides in the background and exposes state for IPC.
+//! Playback session: loads one track at a time, prefetches the next and exposes
+//! state for IPC.
+//!
+//! A whole side is never held in memory. The conductor thread watches the
+//! engine and prepares the following track in the background, so albums still
+//! play across track boundaries even when the files live on a NAS.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use crate::library::model::{DiscFormat, Rpm, Side};
 
@@ -10,8 +16,7 @@ use super::engine::Engine;
 use super::groove::{GrooveBand, GrooveLayout};
 use super::timeline::SideTimeline;
 
-/// Sides are decoded once at this rate, regardless of the device rate. A 96 kHz
-/// interface then resamples on playback instead of holding a 1 GB buffer.
+/// Tracks are decoded at this rate, regardless of the device rate.
 const ENGINE_RATE: u32 = 48_000;
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -41,6 +46,7 @@ pub struct Session {
     loading: AtomicBool,
     output_rate: AtomicU32,
     timeline: Mutex<Option<SideTimeline>>,
+    side: Mutex<Option<Side>>,
     issues: Mutex<Vec<String>>,
     error: Mutex<Option<String>>,
     nominal_rpm: AtomicU32,
@@ -48,6 +54,7 @@ pub struct Session {
     album_id: Mutex<String>,
     side_index: AtomicU32,
     format: Mutex<DiscFormat>,
+    prefetching: AtomicBool,
 }
 
 fn store_f32(atomic: &AtomicU32, value: f32) {
@@ -72,6 +79,7 @@ impl Session {
             loading: AtomicBool::new(false),
             output_rate: AtomicU32::new(48_000),
             timeline: Mutex::new(None),
+            side: Mutex::new(None),
             issues: Mutex::new(Vec::new()),
             error: Mutex::new(None),
             nominal_rpm: AtomicU32::new((33.333f32).to_bits()),
@@ -79,10 +87,11 @@ impl Session {
             album_id: Mutex::new(String::new()),
             side_index: AtomicU32::new(0),
             format: Mutex::new(DiscFormat::Lp12),
+            prefetching: AtomicBool::new(false),
         }
     }
 
-    pub fn start_output(&self) {
+    pub fn start_output(self: &Arc<Self>) {
         match super::output::start(self.engine.clone()) {
             Ok(rate) => {
                 self.output_rate.store(rate, Ordering::Relaxed);
@@ -95,6 +104,59 @@ impl Session {
                 }
             }
         }
+        self.start_conductor();
+    }
+
+    fn start_conductor(self: &Arc<Self>) {
+        let session = Arc::clone(self);
+        std::thread::spawn(move || {
+            loop {
+                session.tick();
+                std::thread::sleep(Duration::from_millis(120));
+            }
+        });
+    }
+
+    fn tick(self: &Arc<Self>) {
+        self.engine.drain_retired();
+        if !self.engine.has_track() || self.engine.has_next() {
+            return;
+        }
+        let Some(timeline) = self.timeline.lock().ok().and_then(|slot| slot.clone()) else {
+            return;
+        };
+        let next = self.engine.track_index() + 1;
+        if next >= timeline.tracks.len() {
+            return;
+        }
+        self.schedule_prefetch(next);
+    }
+
+    fn schedule_prefetch(self: &Arc<Self>, index: usize) {
+        if self.prefetching.swap(true, Ordering::SeqCst) {
+            return;
+        }
+
+        let session = Arc::clone(self);
+        let token = self.token.load(Ordering::SeqCst);
+        std::thread::spawn(move || {
+            let side = session.side.lock().ok().and_then(|slot| slot.clone());
+            let timeline = session.timeline.lock().ok().and_then(|slot| slot.clone());
+            if let (Some(side), Some(timeline)) = (side, timeline) {
+                let (track, issues) = decode::build_track(&side, &timeline, index, ENGINE_RATE);
+                let current = session.engine.track_index();
+                if session.token.load(Ordering::SeqCst) == token
+                    && current + 1 == index
+                    && !session.engine.has_next()
+                {
+                    if let Ok(mut slot) = session.issues.lock() {
+                        slot.extend(issues);
+                    }
+                    session.engine.queue_next(Arc::new(track));
+                }
+            }
+            session.prefetching.store(false, Ordering::SeqCst);
+        });
     }
 
     pub fn load(
@@ -106,6 +168,13 @@ impl Session {
         autoplay: bool,
     ) {
         let session = Arc::clone(self);
+        let token = self.token.fetch_add(1, Ordering::SeqCst) + 1;
+        self.loading.store(true, Ordering::Relaxed);
+        self.engine.pause();
+        self.engine.clear();
+        if let Ok(mut issues) = self.issues.lock() {
+            issues.clear();
+        }
         if let Ok(mut slot) = self.format.lock() {
             *slot = format;
         }
@@ -114,13 +183,6 @@ impl Session {
         }
         self.side_index
             .store(side_index.min(u32::MAX as usize) as u32, Ordering::Relaxed);
-        let token = self.token.fetch_add(1, Ordering::SeqCst) + 1;
-        self.loading.store(true, Ordering::Relaxed);
-        self.engine.pause();
-        self.engine.set_side(None);
-        if let Ok(mut issues) = self.issues.lock() {
-            issues.clear();
-        }
 
         let timeline = SideTimeline::from_side(side);
         let nominal = side.rpm.value();
@@ -130,18 +192,20 @@ impl Session {
         if let Ok(mut slot) = self.timeline.lock() {
             *slot = Some(timeline.clone());
         }
+        if let Ok(mut slot) = self.side.lock() {
+            *slot = Some(side.clone());
+        }
 
         let side = side.clone();
-
         std::thread::spawn(move || {
-            let (audio, issues) = decode::build_side(&side, &timeline, ENGINE_RATE);
+            let (track, issues) = decode::build_track(&side, &timeline, 0, ENGINE_RATE);
             if session.token.load(Ordering::SeqCst) != token {
                 return;
             }
             if let Ok(mut slot) = session.issues.lock() {
                 *slot = issues;
             }
-            session.engine.set_side(Some(Arc::new(audio)));
+            session.engine.load_track(Arc::new(track), 0.0);
             session.loading.store(false, Ordering::Relaxed);
             if autoplay {
                 session.engine.play();
@@ -157,16 +221,96 @@ impl Session {
         self.engine.pause();
     }
 
-    pub fn toggle(&self) {
+    pub fn toggle(self: &Arc<Self>) {
+        if self.loading.load(Ordering::Relaxed) || !self.engine.has_track() {
+            return;
+        }
+        let Some(timeline) = self.timeline.lock().ok().and_then(|slot| slot.clone()) else {
+            return;
+        };
+        let at_end = self.engine.side_position_seconds() >= timeline.total - 0.05;
+        if at_end && !self.engine.is_playing() {
+            self.restart_side();
+            return;
+        }
         self.engine.toggle();
+    }
+
+    fn restart_side(self: &Arc<Self>) {
+        let side = self.side.lock().ok().and_then(|slot| slot.clone());
+        let format = self
+            .format
+            .lock()
+            .map(|slot| *slot)
+            .unwrap_or(DiscFormat::Lp12);
+        let album_id = self
+            .album_id
+            .lock()
+            .map(|slot| slot.clone())
+            .unwrap_or_default();
+        let side_index = self.side_index.load(Ordering::Relaxed) as usize;
+        if let Some(side) = side {
+            self.load(&album_id, side_index, &side, format, true);
+        }
     }
 
     pub fn stop(&self) {
         self.engine.stop();
     }
 
-    pub fn seek(&self, seconds: f64) {
-        self.engine.seek_seconds(seconds);
+    pub fn seek(self: &Arc<Self>, seconds: f64) {
+        let Some(timeline) = self.timeline.lock().ok().and_then(|slot| slot.clone()) else {
+            return;
+        };
+        let Some(target) = timeline.track_at(seconds) else {
+            return;
+        };
+        let Some(span) = timeline.tracks.get(target.index).cloned() else {
+            return;
+        };
+
+        if self.engine.has_track()
+            && !self.loading.load(Ordering::Relaxed)
+            && self.engine.track_index() == target.index
+        {
+            let local = if target.in_gap {
+                target.offset
+            } else {
+                span.pregap + target.offset
+            };
+            self.engine.seek_local_seconds(local);
+            return;
+        }
+
+        let Some(side) = self.side.lock().ok().and_then(|slot| slot.clone()) else {
+            return;
+        };
+        let was_playing = self.engine.is_playing();
+        let token = self.token.fetch_add(1, Ordering::SeqCst) + 1;
+        self.loading.store(true, Ordering::Relaxed);
+        self.engine.pause();
+        self.engine.clear();
+
+        let session = Arc::clone(self);
+        let local = if target.in_gap {
+            target.offset
+        } else {
+            span.pregap + target.offset
+        };
+        std::thread::spawn(move || {
+            let (track, issues) = decode::build_track(&side, &timeline, target.index, ENGINE_RATE);
+            if session.token.load(Ordering::SeqCst) != token {
+                return;
+            }
+            if let Ok(mut slot) = session.issues.lock() {
+                slot.extend(issues);
+            }
+            session.engine.load_track(Arc::new(track), local);
+            session.loading.store(false, Ordering::Relaxed);
+            if was_playing {
+                session.engine.play();
+            }
+        });
     }
 
     pub fn set_rpm(&self, rpm: u32) {
@@ -178,20 +322,20 @@ impl Session {
 
     pub fn state(&self) -> PlaybackState {
         let timeline = self.timeline.lock().ok().and_then(|slot| slot.clone());
-        let position = self.engine.position_seconds();
+        let position = self.engine.side_position_seconds();
         let duration = timeline
             .as_ref()
             .map(|timeline| timeline.total)
             .unwrap_or_else(|| self.engine.duration_seconds());
-        let track = timeline
+        let track_index = if self.engine.has_track() {
+            self.engine.track_index()
+        } else {
+            0
+        };
+        let track_span = timeline
             .as_ref()
-            .and_then(|timeline| timeline.track_at(position));
-        let track_span = track.and_then(|position| {
-            timeline
-                .as_ref()
-                .and_then(|timeline| timeline.tracks.get(position.index))
-                .cloned()
-        });
+            .and_then(|timeline| timeline.tracks.get(track_index))
+            .cloned();
 
         let format = self
             .format
@@ -208,7 +352,7 @@ impl Session {
             .map(|timeline| GrooveLayout::for_side(timeline, format, rpm));
 
         PlaybackState {
-            loaded: self.engine.has_side(),
+            loaded: self.engine.has_track(),
             loading: self.loading.load(Ordering::Relaxed),
             playing: self.engine.is_playing(),
             position,
@@ -229,7 +373,7 @@ impl Session {
                 .map(|layout| layout.bands.clone())
                 .unwrap_or_default(),
             record_radius: layout.map(|layout| layout.record_radius).unwrap_or(151.0),
-            track_index: track.map(|position| position.index).unwrap_or(0),
+            track_index,
             track_number: track_span.as_ref().map(|track| track.number).unwrap_or(0),
             track_title: track_span.map(|track| track.title).unwrap_or_default(),
             issues: self
@@ -239,5 +383,128 @@ impl Session {
                 .unwrap_or_default(),
             error: self.error.lock().ok().and_then(|error| error.clone()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::audio::decode::TrackAudio;
+
+    #[test]
+    fn loads_state_before_any_track() {
+        let session = Session::new();
+        let state = session.state();
+        assert!(!state.loaded);
+        assert!(!state.playing);
+        assert_eq!(state.position, 0.0);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn plays_advances_and_seeks_between_tracks() {
+        use crate::library::model::{Rpm, Side, Track};
+        use std::fs;
+        use std::path::{Path, PathBuf};
+        use std::time::{Duration, Instant};
+
+        fn write_wav(path: &Path, seconds: f64) {
+            let rate = 8_000u32;
+            let frames = (seconds * f64::from(rate)) as u32;
+            let data_len = frames * 4;
+            let mut out = Vec::new();
+            out.extend_from_slice(b"RIFF");
+            out.extend_from_slice(&(36 + data_len).to_le_bytes());
+            out.extend_from_slice(b"WAVEfmt ");
+            out.extend_from_slice(&16u32.to_le_bytes());
+            out.extend_from_slice(&1u16.to_le_bytes());
+            out.extend_from_slice(&2u16.to_le_bytes());
+            out.extend_from_slice(&rate.to_le_bytes());
+            out.extend_from_slice(&(rate * 4).to_le_bytes());
+            out.extend_from_slice(&4u16.to_le_bytes());
+            out.extend_from_slice(&16u16.to_le_bytes());
+            out.extend_from_slice(b"data");
+            out.extend_from_slice(&data_len.to_le_bytes());
+            for frame in 0..frames {
+                let value = ((frame as f32 / rate as f32) * 440.0 * std::f32::consts::TAU).sin();
+                let pcm = (value * 8_000.0) as i16;
+                out.extend_from_slice(&pcm.to_le_bytes());
+                out.extend_from_slice(&pcm.to_le_bytes());
+            }
+            fs::write(path, out).unwrap();
+        }
+
+        fn wait_until(mut condition: impl FnMut() -> bool) {
+            let deadline = Instant::now() + Duration::from_secs(6);
+            while Instant::now() < deadline {
+                if condition() {
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            panic!("condition not reached in time");
+        }
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir: PathBuf =
+            std::env::temp_dir().join(format!("longplay-session-{}-{stamp}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("tone.wav");
+        write_wav(&path, 1.0);
+        let track = |index: usize| Track {
+            id: format!("t{index}"),
+            number: index as u32 + 1,
+            title: format!("Track {}", index + 1),
+            artist: "Test".into(),
+            duration: 1.0,
+            pregap: 0.0,
+            path: path.to_string_lossy().into_owned(),
+            offset: 0.0,
+            side: "A".into(),
+        };
+        let side = Side {
+            label: "A".into(),
+            rpm: Rpm::R33,
+            matrix: None,
+            tracks: vec![track(0), track(1)],
+        };
+
+        let session = Arc::new(Session::new());
+        session.start_output();
+        session.load("album", 0, &side, DiscFormat::Lp12, true);
+
+        wait_until(|| session.state().loaded);
+        wait_until(|| session.state().position > 1.15);
+        let state = session.state();
+        assert_eq!(state.track_index, 1, "did not advance to the next track");
+        assert!(state.playing);
+
+        wait_until(|| !session.state().playing);
+        let state = session.state();
+        assert!(state.position >= 1.9, "position {}", state.position);
+
+        session.seek(0.2);
+        wait_until(|| session.state().track_index == 0 && session.state().position >= 0.15);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn track_audio_is_not_cloned_by_the_queue() {
+        // The queue only keeps Arc handles, so the samples live exactly once.
+        let track = Arc::new(TrackAudio {
+            samples: vec![0.0; 8],
+            rate: 48_000,
+            duration: 0.0,
+            pregap: 0.0,
+            track_index: 0,
+            side_start: 0.0,
+        });
+        let engine = Engine::new();
+        engine.load_track(track.clone(), 0.0);
+        engine.queue_next(track);
+        assert!(engine.has_next());
     }
 }

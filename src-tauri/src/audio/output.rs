@@ -53,7 +53,7 @@ pub fn start(engine: Arc<Engine>) -> Result<u32, String> {
 
             let config = supported.config();
             let rate = config.sample_rate;
-            let name = device.name().unwrap_or_default();
+            let name = device.to_string();
             eprintln!("Audio: {name}, {channels} Kanäle, {rate} Hz");
 
             let mut dsp = super::engine::DspState::new();

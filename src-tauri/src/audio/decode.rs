@@ -1,7 +1,9 @@
-//! Decoding a side into one contiguous 48 kHz stereo buffer.
+//! Decoding one track at a time.
 //!
-//! Loading a whole side keeps playback, seeking and scratching sample accurate
-//! and lock free. A 22 minute side is roughly 63 MB of f32 samples.
+//! Only the current track and (prefetched) the next one are held in memory. This
+//! keeps memory and NAS traffic low; a 6 minute track is about 130 MB at 48 kHz
+//! stereo f32. The track buffer includes its pregap silence so the side stays
+//! contiguous.
 
 use std::fs::File;
 use std::path::Path;
@@ -18,17 +20,16 @@ use crate::library::model::Side;
 use super::resample::resample_to;
 use super::timeline::SideTimeline;
 
-pub struct TrackMarker {
-    pub index: usize,
-    pub start: u64,
-    pub end: u64,
-}
-
-pub struct SideAudio {
+pub struct TrackAudio {
+    /// Interleaved stereo f32, starting with the track's pregap silence.
     pub samples: Vec<f32>,
     pub rate: u32,
+    /// Duration of the buffer (pregap + audio) in seconds.
     pub duration: f64,
-    pub tracks: Vec<TrackMarker>,
+    pub pregap: f64,
+    pub track_index: usize,
+    /// Side time at the first sample of the buffer.
+    pub side_start: f64,
 }
 
 #[derive(Debug)]
@@ -126,67 +127,79 @@ fn to_stereo(samples: &[f32], channels: usize) -> Vec<f32> {
     }
 }
 
-/// Builds the complete audio for one side, including pregaps.
-pub fn build_side(
+/// Decodes one track of a side into its own buffer, including the pregap.
+pub fn build_track(
     side: &Side,
     timeline: &SideTimeline,
+    index: usize,
     target_rate: u32,
-) -> (SideAudio, Vec<String>) {
-    let mut samples: Vec<f32> = Vec::new();
-    let mut markers = Vec::new();
+) -> (TrackAudio, Vec<String>) {
     let mut issues = Vec::new();
+    let Some(span) = timeline.tracks.get(index) else {
+        return (
+            TrackAudio {
+                samples: Vec::new(),
+                rate: target_rate,
+                duration: 0.0,
+                pregap: 0.0,
+                track_index: index,
+                side_start: 0.0,
+            },
+            vec!["Track-Index außerhalb der Seite".to_string()],
+        );
+    };
+    let Some(track) = side.tracks.get(span.index) else {
+        return (
+            TrackAudio {
+                samples: Vec::new(),
+                rate: target_rate,
+                duration: 0.0,
+                pregap: 0.0,
+                track_index: span.index,
+                side_start: (span.start - span.pregap).max(0.0),
+            },
+            vec!["Track fehlt in den Metadaten".to_string()],
+        );
+    };
 
-    for span in &timeline.tracks {
-        let Some(track) = side.tracks.get(span.index) else {
-            continue;
-        };
+    let pregap_frames = (span.pregap * f64::from(target_rate)).round() as usize;
+    let want_frames = (span.duration * f64::from(target_rate)).round() as usize;
+    let mut samples = vec![0.0; pregap_frames * 2];
 
-        let gap_frames = (span.pregap * f64::from(target_rate)).round() as usize;
-        samples.resize(samples.len() + gap_frames * 2, 0.0);
-        let start = (samples.len() / 2) as u64;
+    match decode_file(Path::new(&track.path)) {
+        Ok(decoded) => {
+            let stereo = to_stereo(&decoded.samples, decoded.channels);
+            let source_frames = stereo.len() / 2;
+            let skip = (track.offset * f64::from(decoded.rate)).round() as usize;
+            let take = (span.duration * f64::from(decoded.rate)).round() as usize;
+            let end = (skip + take).min(source_frames);
+            let slice: &[f32] = if skip < end {
+                &stereo[skip * 2..end * 2]
+            } else {
+                &[]
+            };
 
-        let want_frames = (span.duration * f64::from(target_rate)).round() as usize;
-        let decoded = decode_file(Path::new(&track.path));
-
-        match decoded {
-            Ok(decoded) => {
-                let stereo = to_stereo(&decoded.samples, decoded.channels);
-                let source_frames = stereo.len() / 2;
-                let skip = (track.offset * f64::from(decoded.rate)).round() as usize;
-                let take = (span.duration * f64::from(decoded.rate)).round() as usize;
-                let end = (skip + take).min(source_frames);
-                let slice: &[f32] = if skip < end {
-                    &stereo[skip * 2..end * 2]
-                } else {
-                    &[]
-                };
-
-                let mut converted = resample_to(slice, decoded.rate, 2, target_rate);
-                converted.resize(want_frames * 2, 0.0);
-                converted.truncate(want_frames * 2);
-                samples.extend_from_slice(&converted);
-            }
-            Err(error) => {
-                issues.push(format!("{}: {error}", track.path));
-                samples.resize(samples.len() + want_frames * 2, 0.0);
-            }
+            let mut converted = resample_to(slice, decoded.rate, 2, target_rate);
+            converted.resize(want_frames * 2, 0.0);
+            converted.truncate(want_frames * 2);
+            samples.extend_from_slice(&converted);
         }
-
-        markers.push(TrackMarker {
-            index: span.index,
-            start,
-            end: (samples.len() / 2) as u64,
-        });
+        Err(error) => {
+            issues.push(format!("{}: {error}", track.path));
+            samples.resize(samples.len() + want_frames * 2, 0.0);
+        }
     }
 
     let duration = samples.len() as f64 / (2.0 * f64::from(target_rate));
 
     (
-        SideAudio {
+        TrackAudio {
             samples,
             rate: target_rate,
             duration,
-            tracks: markers,
+            pregap: span.pregap,
+            track_index: span.index,
+            side_start: (span.start - span.pregap).max(0.0),
         },
         issues,
     )
@@ -270,8 +283,8 @@ mod tests {
     }
 
     #[test]
-    fn builds_a_side_with_gaps_and_markers() {
-        let dir = temp_dir("side");
+    fn builds_one_track_with_its_pregap() {
+        let dir = temp_dir("track");
         let path = dir.join("tone.wav");
         write_wav(&path, 2.0, 44_100, 440.0);
 
@@ -285,27 +298,27 @@ mod tests {
             ],
         };
         let timeline = SideTimeline::from_side(&side);
-        let (audio, issues) = build_side(&side, &timeline, 48_000);
 
+        let (first, issues) = build_track(&side, &timeline, 0, 48_000);
         assert!(issues.is_empty(), "{issues:?}");
-        assert_eq!(audio.rate, 48_000);
-        assert!((audio.duration - 3.0).abs() < 1e-3, "{}", audio.duration);
-        assert_eq!(audio.tracks.len(), 2);
-        assert_eq!(audio.tracks[0].start, 24_000);
-        assert_eq!(audio.tracks[0].end, 72_000);
-        assert_eq!(audio.tracks[1].start, 96_000);
-        assert_eq!(audio.tracks[1].end, 144_000);
-
-        // The pregap is silent, the audio is not.
+        assert_eq!(first.rate, 48_000);
+        assert!((first.duration - 1.5).abs() < 1e-3, "{}", first.duration);
+        assert_eq!(first.track_index, 0);
+        assert_eq!(first.side_start, 0.0);
         assert!(
-            audio.samples[..24_000 * 2]
+            first.samples[..24_000 * 2]
                 .iter()
                 .all(|value| *value == 0.0)
         );
-        let peak = audio.samples[24_000 * 2..48_000 * 2]
+        let peak = first.samples[24_000 * 2..]
             .iter()
             .fold(0.0f32, |acc, value| acc.max(value.abs()));
         assert!(peak > 0.2, "peak {peak}");
+
+        let (second, _) = build_track(&side, &timeline, 1, 48_000);
+        assert!((second.duration - 1.5).abs() < 1e-3);
+        assert!((second.side_start - 1.5).abs() < 1e-9);
+        assert_eq!(second.track_index, 1);
 
         fs::remove_dir_all(&dir).ok();
     }
@@ -319,7 +332,7 @@ mod tests {
             tracks: vec![track("a", Path::new("/nope/missing.flac"), 1.0, 0.0, 0.0)],
         };
         let timeline = SideTimeline::from_side(&side);
-        let (audio, issues) = build_side(&side, &timeline, 48_000);
+        let (audio, issues) = build_track(&side, &timeline, 0, 48_000);
         assert_eq!(issues.len(), 1);
         assert!((audio.duration - 1.0).abs() < 1e-3);
         assert!(audio.samples.iter().all(|value| *value == 0.0));

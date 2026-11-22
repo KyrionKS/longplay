@@ -14,9 +14,11 @@ echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler N
 
 ![Longplay mit geladenem Album](docs/phase2.png)
 
-**Audio:** Eine Seite wird beim Auflegen komplett dekodiert (48 kHz stereo), inklusive
-Pregaps. Wiedergabe läuft über einen Catmull-Rom-Resampler mit Varispeed; Knistern,
-Rumpeln, Nadel-Fall, Wow/Flutter und Innenrillen-Charakter werden prozedural erzeugt.
+**Audio:** Es wird immer nur der aktuelle Song dekodiert (48 kHz stereo, inklusive
+Pregap); der nächste lädt im Hintergrund vor. Das ist für Bibliotheken auf einem NAS
+gedacht und hält den Speicher klein. Wiedergabe läuft über einen Catmull-Rom-Resampler
+mit Varispeed; Knistern, Rumpeln, Nadel-Fall, Wow/Flutter und Innenrillen-Charakter
+werden prozedural erzeugt.
 Auf macOS geht es über CoreAudio (cpal) mit dem **Standard-Ausgabegerät**; Stereo liegt
 auf den ersten beiden Kanälen, weitere Ausgänge eines Interfaces bleiben still. Es gibt
 bewusst keinen Geräte-Picker: was macOS als Standardausgabe führt, wird benutzt.

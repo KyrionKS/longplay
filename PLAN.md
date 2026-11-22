@@ -178,21 +178,26 @@ Track-Grenze, die der halben Gesamtdauer am nächsten liegt; 12″ max. 22 min/S
 ### Datenfluss
 
 ```
-Datei → symphonia (Worker) → Ringpuffer 45 s → Resampler (Callback) → Noise-Mix → Limiter → cpal
+Datei → symphonia (Thread) → Track-Puffer 48 kHz (inkl. Pregap) → Resampler (Callback) → Noise-Mix → Limiter → Gerät
 ```
 
-- Ringpuffer: SPSC, ~45 s (17 MB), gleichzeitig Reverse-Fenster für Scratch.
-- Playhead: f64 in Quellframes; Rate = `rpm / nominal_rpm × gerätefaktor`.
-- Resampler: Catmull-Rom, 4 Stützpunkte, L/R getrennt, Rate −3,0 … +3,0.
-- Trackwechsel: 50 ms Fade, Pregap-Stille als Teil der Timeline.
+- **Song für Song:** es wird nur der aktuelle Track gehalten; der nächste wird im
+  Hintergrund vorgeladen. Das ist NAS-tauglich und begrenzt den Speicher auf zwei
+  Tracks (6 min ≈ 130 MB pro Track bei 48 kHz stereo f32).
+- Der Track-Puffer beginnt mit seiner Pregap-Stille; dadurch bleibt die Seite
+  lückenlos und der Tonarm kann durch die Pause wandern.
+- Auto-Advance: am Track-Ende tauscht der Callback auf den vorbereiteten Puffer,
+  ohne Loader und ohne Klick (20 ms Fade). Ist kein nächster Track bereit, endet die Seite.
+- Seek innerhalb des Tracks ist sample-genau; ein Seek in einen anderen Track lädt
+  diesen kurz nach (Status `loading`).
 - Seitenende: letzter Track endet → Nadel hebt ab → Auto-Return → `side-ended`.
 
 ### Parameter (Defaults)
 
 | Parameter | Wert |
 |---|---|
-| Ringpuffer | 45 s |
-| Buffer | 256 Frames |
+| Track-Puffer | 1 Track + 1 Prefetch, 48 kHz |
+| Buffer | Gerätestandard (CoreAudio) |
 | Rate-Clamp | ±3,0 |
 | Wow | 0,55 Hz, ±0,15 % |
 | Flutter | 6,3 Hz, ±0,05 % |
@@ -330,11 +335,11 @@ Messung auf einer echten Bibliothek steht noch aus; kaputte Tags landen als Scan
 - [x] Wow/Flutter, Innenrille, Übersprechen, Crackle, Rumble, Nadel-Fall
 - [x] Rate/Volume/Character über Atomare, RPM über IPC
 
-**Abweichung vom Plan:** Statt eines 45-s-Ringpuffers wird die komplette Seite
-vorgeladen (48 kHz stereo f32, 22 min ≈ 500 MB). Das macht Seek und Scratch
-sample-genau, ohne Decoder-Thread im Audio-Callback. Streaming folgt, wenn
-Speicher oder Ladezeiten zum Problem werden. Die Seite wird immer mit 48 kHz
-gehalten; 96-kHz-Interfaces werden erst in der Wiedergabe hochgerechnet.
+**Abweichung vom Plan:** Statt eines 45-s-Ringpuffers wird **ein Track** (plus
+Prefetch des nächsten) geladen. Das hält NAS-Traffic und Speicher klein; ein
+Track-Puffer enthält seine Pregap. Seek im Track ist sample-genau, ein
+Track-Wechsel lädt kurz nach. 96-kHz-Interfaces werden erst in der Wiedergabe
+hochgerechnet, die Puffer bleiben bei 48 kHz.
 
 **Abnahme:** Album läuft, Seek sample-genau, Ratenwechsel ohne Klicks, Seitenende
 stoppt. Auf macOS/CPU noch nicht gemessen; Linux-Dev nutzt einen Null-Sink.
