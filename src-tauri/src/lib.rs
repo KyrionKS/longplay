@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 
 use tauri::Manager;
 
+use audio::{PlaybackState, Session};
 use library::db::Db;
 use library::model::Album;
 use library::scanner::{self, ScanSummary};
@@ -20,6 +21,7 @@ use library::scanner::{self, ScanSummary};
 pub struct AppState {
     db: Arc<Mutex<Db>>,
     covers_dir: PathBuf,
+    playback: Arc<Session>,
 }
 
 /// Version shown in the settings panel.
@@ -70,6 +72,67 @@ async fn library_scan(
     .map_err(|error| error.to_string())?
 }
 
+#[tauri::command]
+fn playback_load(
+    album_id: String,
+    side_index: usize,
+    autoplay: bool,
+    state: tauri::State<'_, AppState>,
+) -> Result<PlaybackState, String> {
+    let album = {
+        let db = state
+            .db
+            .lock()
+            .map_err(|_| "Datenbank ist gesperrt".to_string())?;
+        db.album(&album_id)
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| "Album nicht gefunden".to_string())?
+    };
+
+    let side = album
+        .sides
+        .get(side_index)
+        .ok_or_else(|| "Seite nicht gefunden".to_string())?;
+
+    state.playback.load(&album_id, side_index, side, autoplay);
+    Ok(state.playback.state())
+}
+
+#[tauri::command]
+fn playback_state(state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.state()
+}
+
+#[tauri::command]
+fn playback_toggle(state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.toggle();
+    state.playback.state()
+}
+
+#[tauri::command]
+fn playback_pause(state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.pause();
+    state.playback.state()
+}
+
+#[tauri::command]
+fn playback_stop(state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.stop();
+    state.playback.state()
+}
+
+#[tauri::command]
+fn playback_seek(seconds: f64, state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.seek(seconds);
+    state.playback.state()
+}
+
+#[tauri::command]
+fn playback_set_rpm(rpm: u32, state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.set_rpm(rpm);
+    state.playback.state()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -97,9 +160,13 @@ pub fn run() {
                 }
             }
 
+            let playback = Arc::new(Session::new());
+            playback.start_output();
+
             app.manage(AppState {
                 db: Arc::new(Mutex::new(db)),
                 covers_dir,
+                playback,
             });
             Ok(())
         })
@@ -107,7 +174,14 @@ pub fn run() {
             app_version,
             library_load,
             library_folders,
-            library_scan
+            library_scan,
+            playback_load,
+            playback_state,
+            playback_toggle,
+            playback_pause,
+            playback_stop,
+            playback_seek,
+            playback_set_rpm
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Longplay");

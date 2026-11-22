@@ -52,3 +52,20 @@ export interface ScanSummary {
   issues: string[];
   elapsedMs: number;
 }
+
+export interface PlaybackState {
+  loaded: boolean;
+  loading: boolean;
+  playing: boolean;
+  position: number;
+  duration: number;
+  side: string;
+  sideIndex: number;
+  albumId: string;
+  rpm: string;
+  trackIndex: number;
+  trackNumber: number;
+  trackTitle: string;
+  issues: string[];
+  error: string | null;
+}

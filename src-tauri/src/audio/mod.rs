@@ -1,8 +1,17 @@
 //! Audio pipeline.
 //!
-//! Phase 2: symphonia decoder on a worker thread, a 45 s ring buffer, a
-//! fractional resampler driven by the platter rate, procedural vinyl noise and
-//! the cpal output stream.
-//!
-//! The output device lives behind the `audio-device` feature so the DSP can be
-//! built and tested on machines without ALSA headers.
+//! Decoding, interpolation, procedural vinyl noise and platform output. A whole
+//! side is decoded into one 48 kHz stereo buffer, which keeps playback, seeking
+//! and scratching sample accurate and free of locks in the audio callback.
+
+pub mod decode;
+pub mod engine;
+pub mod noise;
+pub mod output;
+pub mod resample;
+pub mod session;
+pub mod timeline;
+
+pub use engine::{DspState, Engine};
+pub use session::{PlaybackState, Session};
+pub use timeline::{SideTimeline, TrackPosition, TrackSpan};

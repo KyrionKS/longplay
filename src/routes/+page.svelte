@@ -5,6 +5,13 @@
   import Crate from "$lib/components/Crate.svelte";
   import Deck from "$lib/components/Deck.svelte";
   import { addMusicFolder, library, loadLibrary } from "$lib/library.svelte";
+  import {
+    loadSide,
+    playback,
+    refreshPlayback,
+    setRpm,
+    togglePlayback,
+  } from "$lib/playback.svelte";
   import type { Album, SortKey } from "$lib/types";
 
   let selectedId = $state<string | null>(null);
@@ -56,7 +63,18 @@
     if (selected && sideIndex > selected.sides.length - 1) sideIndex = 0;
   });
 
-  onMount(loadLibrary);
+  onMount(() => {
+    loadLibrary();
+    const timer = window.setInterval(async () => {
+      await refreshPlayback();
+      const state = playback.state;
+      if (!selectedId && state?.loaded && state.albumId) {
+        selectedId = state.albumId;
+        sideIndex = state.sideIndex;
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  });
 
   function cycleSort() {
     const index = sortOrder.indexOf(library.sort);
@@ -72,6 +90,23 @@
   function select(album: Album) {
     selectedId = album.id;
     sideIndex = 0;
+    void loadSide(album.id, 0, false);
+  }
+
+  function changeSide(index: number) {
+    if (!selected) return;
+    const wasPlaying = !!playback.state?.playing;
+    sideIndex = index;
+    void loadSide(selected.id, index, wasPlaying);
+  }
+
+  function toggle() {
+    if (!selected) return;
+    void togglePlayback();
+  }
+
+  function changeRpm(rpm: number) {
+    void setRpm(rpm);
   }
 </script>
 
@@ -95,11 +130,19 @@
       onSort={cycleSort}
       onQuery={search}
     />
-    <Deck album={selected} {side} {sideIndex} onSide={(index) => (sideIndex = index)} />
+    <Deck
+      album={selected}
+      {side}
+      {sideIndex}
+      playback={playback.state}
+      onSide={changeSide}
+      onToggle={toggle}
+      onRpm={changeRpm}
+    />
   </div>
 
-  {#if library.error}
-    <div class="error" role="alert">{library.error}</div>
+  {#if library.error || playback.error}
+    <div class="error" role="alert">{library.error ?? playback.error}</div>
   {/if}
 </main>
 

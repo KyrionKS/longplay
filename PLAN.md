@@ -3,7 +3,7 @@
 Ein skeuomorpher Plattenspieler für die eigene Musiksammlung auf macOS.
 Arbeitstitel: **Longplay** (Namenskollision mit longplay.app beachten, finaler Name vor Phase 5).
 
-**Status 2026-11-22:** Phase 0 und Phase 1 umgesetzt. Nächster Schritt: Phase 2 (Audio).
+**Status 2026-11-22:** Phase 0 bis 2 umgesetzt. Nächster Schritt: Phase 3 (Turntable-Interaktion).
 
 ---
 
@@ -324,13 +324,19 @@ Messung auf einer echten Bibliothek steht noch aus; kaputte Tags landen als Scan
 
 ### Phase 2 — Audio
 
-- [ ] Decoder, Ringpuffer, Resampler, Offline-Renderer + Tests
-- [ ] cpal-Ausgabe hinter Feature
-- [ ] Timeline inkl. Pregaps, Trackwechsel, Seitenende
-- [ ] Wow/Flutter, Innenrille, Übersprechen
-- [ ] Parameter-Set über IPC
+- [x] Decoder, Resampler, Offline-Tests (24 Audio-Tests)
+- [x] cpal-Ausgabe (macOS/Windows), Linux-Null-Sink für Development
+- [x] Timeline inkl. Pregaps, Trackwechsel, Seitenende
+- [x] Wow/Flutter, Innenrille, Übersprechen, Crackle, Rumble, Nadel-Fall
+- [x] Rate/Volume/Character über Atomare, RPM über IPC
 
-**Abnahme:** Album läuft, Seek ±20 ms, keine Klicks, CPU < 5 % auf M1.
+**Abweichung vom Plan:** Statt eines 45-s-Ringpuffers wird die komplette Seite
+vorgeladen (22 min ≈ 63 MB). Das macht Seek und Scratch sample-genau, ohne
+Decoder-Thread im Audio-Callback. Streaming kann später ergänzt werden, wenn
+Ladezeiten oder Speicher zum Problem werden.
+
+**Abnahme:** Album läuft, Seek sample-genau, Ratenwechsel ohne Klicks, Seitenende
+stoppt. Auf macOS/CPU noch nicht gemessen; Linux-Dev nutzt einen Null-Sink.
 
 ### Phase 3 — Turntable
 

@@ -8,10 +8,17 @@ einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler und lässt dich 
 von Hand aufsetzen, am Teller scratchen, zwischen 33⅓ und 45 umschalten und Alben wie
 echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler Nadelphysik.
 
-> **Status:** Phase 1 — Bibliothek. Ordner scannen, Alben mit Covern und Farbpalette
-> in der Kiste, Seite A/B, Auswahl landet auf dem Teller. Audio folgt in Phase 2.
+> **Status:** Phase 2 — Audio. Bibliothek scannen, Album auflegen, Start/Stop,
+> Seite A/B wechseln, 33⅓/45 umschalten. Die Platte dreht sich und die Seite endet
+> von selbst.
 
 ![Longplay mit geladenem Album](docs/phase1.png)
+
+**Audio:** Eine Seite wird beim Auflegen komplett dekodiert (48 kHz stereo), inklusive
+Pregaps. Wiedergabe läuft über einen Catmull-Rom-Resampler mit Varispeed; Knistern,
+Rumpeln, Nadel-Fall, Wow/Flutter und Innenrillen-Charakter werden prozedural erzeugt.
+Auf macOS geht es über CoreAudio (cpal), auf Linux läuft zum Entwickeln ein
+Echtzeit-Null-Sink, weil hier die ALSA-Header fehlen.
 
 ## Prinzipien
 
@@ -28,6 +35,9 @@ Voraussetzungen: Rust (stable), Node 22+, auf macOS Xcode Command Line Tools.
 npm install
 npm run tauri dev
 ```
+
+Bedienung: Album anklicken legt es auf, `START/STOP` startet, die Tabs `A`/`B`
+wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
 
 Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
 

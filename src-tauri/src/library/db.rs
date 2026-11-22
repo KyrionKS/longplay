@@ -143,6 +143,10 @@ impl Db {
         Ok(albums)
     }
 
+    pub fn album(&self, id: &str) -> Result<Option<Album>, DbError> {
+        Ok(self.load_albums()?.into_iter().find(|album| album.id == id))
+    }
+
     pub fn set_folders(&mut self, folders: &[std::path::PathBuf]) -> Result<(), DbError> {
         let tx = self.conn.transaction()?;
         tx.execute("DELETE FROM folders", [])?;

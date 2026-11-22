@@ -1,17 +1,28 @@
 <script lang="ts">
-  import type { Album, Side } from "$lib/types";
+  import type { Album, PlaybackState, Side } from "$lib/types";
+  import { formatClock } from "$lib/playback.svelte";
   import Vinyl from "./Vinyl.svelte";
 
   interface Props {
     album: Album | null;
     side: Side | null;
     sideIndex: number;
+    playback: PlaybackState | null;
     onSide: (index: number) => void;
+    onToggle: () => void;
+    onRpm: (rpm: number) => void;
   }
 
-  let { album, side, sideIndex, onSide }: Props = $props();
+  let { album, side, sideIndex, playback, onSide, onToggle, onRpm }: Props = $props();
 
-  const rpmLabel = $derived(side ? (side.rpm === "45" ? "45" : "33⅓") : "33⅓");
+  const playing = $derived(!!playback?.playing && !playback.loading);
+  const loading = $derived(!!playback?.loading);
+  const rpmValue = $derived(
+    playback?.rpm === "45" || (!playback && side?.rpm === "45") ? 45 : 33,
+  );
+  const rpmLabel = $derived(rpmValue === 45 ? "45" : "33⅓");
+  const position = $derived(playback?.position ?? 0);
+  const duration = $derived(playback?.duration ?? 0);
 </script>
 
 <section class="deck" aria-label="Plattenspieler">
@@ -37,7 +48,7 @@
         </svg>
 
         {#if album && side}
-          <Vinyl {album} {side} />
+          <Vinyl {album} {side} spinning={playing} />
         {:else}
           <div class="mat"></div>
           <div class="spindle"></div>
@@ -53,6 +64,7 @@
                 class="side-tab"
                 class:active={index === sideIndex}
                 type="button"
+                disabled={loading}
                 onclick={() => onSide(index)}
                 title={`Seite ${diskSide.label} auflegen`}
               >
@@ -61,6 +73,16 @@
             {/each}
             <span class="rpm-note">{rpmLabel} RPM</span>
           </div>
+          <span class="time">
+            {#if loading}
+              Platte wird aufgelegt …
+            {:else}
+              {formatClock(position)} / {formatClock(duration)}
+              {#if playback?.trackTitle}
+                · {playback.trackNumber}. {playback.trackTitle}
+              {/if}
+            {/if}
+          </span>
         </div>
       {:else}
         <p class="deck-hint">Platte aus der Kiste auflegen</p>
@@ -141,18 +163,32 @@
   <div class="controls">
     <button
       class="start"
-      class:ready={!!album}
+      class:ready={!!album && !loading}
+      class:playing
       type="button"
-      aria-disabled={!album}
-      title={album ? "Wiedergabe folgt in Phase 2" : "Noch keine Platte aufgelegt"}
+      disabled={!album || loading}
+      onclick={onToggle}
+      title={playing ? "Wiedergabe anhalten" : "Platte starten"}
     >
-      <span>START</span>
-      <span class="sub">STOP</span>
+      <span class="primary">{playing ? "STOP" : "START"}</span>
+      <span class="sub">{playing ? "START" : "STOP"}</span>
     </button>
 
     <div class="rpm" role="group" aria-label="Drehzahl">
-      <button class="speed" class:active={!side || side.rpm === "33"} type="button">33</button>
-      <button class="speed" class:active={side?.rpm === "45"} type="button">45</button>
+      <button
+        class="speed"
+        class:active={rpmValue === 33}
+        type="button"
+        disabled={!album || loading}
+        onclick={() => onRpm(33)}>33</button
+      >
+      <button
+        class="speed"
+        class:active={rpmValue === 45}
+        type="button"
+        disabled={!album || loading}
+        onclick={() => onRpm(45)}>45</button
+      >
     </div>
 
     <button
@@ -362,6 +398,17 @@
     color: rgba(239, 230, 207, 0.32);
   }
 
+  .time {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: rgba(239, 230, 207, 0.38);
+    font-variant-numeric: tabular-nums;
+  }
+
   .arm {
     position: absolute;
     right: 1%;
@@ -411,6 +458,19 @@
     opacity: 0.92;
   }
 
+  .start.playing {
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.75) inset,
+      0 -2px 6px rgba(0, 0, 0, 0.35) inset,
+      0 0 18px rgba(232, 207, 122, 0.35),
+      0 6px 12px rgba(0, 0, 0, 0.55);
+  }
+
+  .start .primary {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+
   .start .sub {
     font-size: 7px;
     opacity: 0.65;
@@ -458,7 +518,6 @@
     opacity: 0.8;
   }
 
-  .start[aria-disabled="true"],
   .brush[aria-disabled="true"] {
     cursor: default;
   }

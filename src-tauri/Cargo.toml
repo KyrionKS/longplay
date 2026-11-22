@@ -28,6 +28,8 @@ blake3 = "1.8.7"
 rusqlite = { version = "0.43.0", features = ["bundled"] }
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 tauri-plugin-dialog = "2.8.4"
+symphonia = { version = "0.6.1", default-features = false, features = ["aac", "adpcm", "aiff", "alac", "flac", "isomp4", "mp3", "ogg", "opt-simd", "pcm", "vorbis", "wav"] }
+arc-swap = "1.9.5"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
@@ -37,3 +39,6 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+cpal = "0.18.2"

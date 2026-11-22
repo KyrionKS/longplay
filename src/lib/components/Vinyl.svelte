@@ -2,9 +2,14 @@
   import type { Album, Side } from "$lib/types";
   import { formatDuration } from "$lib/library.svelte";
 
-  let { album, side }: { album: Album; side: Side } = $props();
+  let { album, side, spinning = false }: { album: Album; side: Side; spinning?: boolean } = $props();
 
-  const minutes = $derived(Math.round(album.duration / 60));
+  const sideDuration = $derived(
+    side.tracks.reduce((total, track) => total + track.duration + track.pregap, 0),
+  );
+  const durationLabel = $derived(
+    sideDuration >= 60 ? `${Math.round(sideDuration / 60)} MIN` : formatDuration(sideDuration),
+  );
   const rpm = $derived(side.rpm === "45" ? "45" : "33⅓");
 </script>
 
@@ -15,24 +20,29 @@
   style:--label={album.palette.label}
   style:--ink={album.palette.dark}
 >
-  <div class="grooves" aria-hidden="true"></div>
-  <div class="sheen" aria-hidden="true"></div>
-  <div class="edge" aria-hidden="true"></div>
+  <div
+    class="disc-layer"
+    class:spinning
+    style:--period={side.rpm === "45" ? "1.333s" : "1.8s"}
+    aria-hidden="true"
+  >
+    <div class="grooves"></div>
 
-  <div class="label">
-    <div class="top">
-      <span class="cat">{side.matrix ?? "LONGPLAY"}</span>
-      <span class="title">{album.title}</span>
-    </div>
-    <div class="bottom">
-      <span class="artist">{album.albumArtist}</span>
-      <span class="meta">SEITE {side.label} · {rpm} RPM</span>
-      <span class="meta dim">
-        {side.tracks.length} TRACKS · {minutes > 0 ? `${minutes} MIN` : formatDuration(album.duration)}
-      </span>
+    <div class="label">
+      <div class="top">
+        <span class="cat">{side.matrix ?? "LONGPLAY"}</span>
+        <span class="title">{album.title}</span>
+      </div>
+      <div class="bottom">
+        <span class="artist">{album.albumArtist}</span>
+        <span class="meta">SEITE {side.label} · {rpm} RPM</span>
+        <span class="meta dim">{side.tracks.length} TRACKS · {durationLabel}</span>
+      </div>
     </div>
   </div>
 
+  <div class="sheen" aria-hidden="true"></div>
+  <div class="edge" aria-hidden="true"></div>
   <div class="spindle" aria-hidden="true"></div>
 </div>
 
@@ -56,6 +66,24 @@
       0 18px 34px rgba(0, 0, 0, 0.55),
       0 0 0 3px rgba(255, 255, 255, 0.04) inset;
     animation: settle 520ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  }
+
+  .disc-layer {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    animation: spin var(--period, 1.8s) linear infinite;
+    animation-play-state: paused;
+  }
+
+  .disc-layer.spinning {
+    animation-play-state: running;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .grooves {
