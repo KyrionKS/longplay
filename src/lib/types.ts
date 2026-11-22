@@ -53,6 +53,17 @@ export interface ScanSummary {
   elapsedMs: number;
 }
 
+export type GrooveKind = "leadIn" | "gap" | "track" | "runOut";
+
+export interface GrooveBand {
+  kind: GrooveKind;
+  trackIndex: number | null;
+  start: number;
+  end: number;
+  startNorm: number;
+  endNorm: number;
+}
+
 export interface PlaybackState {
   loaded: boolean;
   loading: boolean;
@@ -63,6 +74,8 @@ export interface PlaybackState {
   sideIndex: number;
   albumId: string;
   rpm: string;
+  grooves: GrooveBand[];
+  recordRadius: number;
   trackIndex: number;
   trackNumber: number;
   trackTitle: string;

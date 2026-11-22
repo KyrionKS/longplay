@@ -94,7 +94,9 @@ fn playback_load(
         .get(side_index)
         .ok_or_else(|| "Seite nicht gefunden".to_string())?;
 
-    state.playback.load(&album_id, side_index, side, autoplay);
+    state
+        .playback
+        .load(&album_id, side_index, side, album.format, autoplay);
     Ok(state.playback.state())
 }
 

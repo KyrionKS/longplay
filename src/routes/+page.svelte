@@ -53,6 +53,15 @@
   const selected = $derived(library.albums.find((album) => album.id === selectedId) ?? null);
   const side = $derived(selected?.sides[sideIndex] ?? null);
 
+  const loadedState = $derived(
+    playback.state &&
+      selected &&
+      playback.state.albumId === selected.id &&
+      playback.state.sideIndex === sideIndex
+      ? playback.state
+      : null,
+  );
+
   const sortOrder: SortKey[] = ["added", "artist", "album", "year"];
 
   $effect(() => {
@@ -135,6 +144,7 @@
       {side}
       {sideIndex}
       playback={playback.state}
+      grooves={loadedState?.grooves ?? []}
       onSide={changeSide}
       onToggle={toggle}
       onRpm={changeRpm}

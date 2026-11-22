@@ -3,11 +3,16 @@
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use crate::library::model::Side;
+use crate::library::model::{DiscFormat, Rpm, Side};
 
 use super::decode;
 use super::engine::Engine;
+use super::groove::{GrooveBand, GrooveLayout};
 use super::timeline::SideTimeline;
+
+/// Sides are decoded once at this rate, regardless of the device rate. A 96 kHz
+/// interface then resamples on playback instead of holding a 1 GB buffer.
+const ENGINE_RATE: u32 = 48_000;
 
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -21,6 +26,8 @@ pub struct PlaybackState {
     pub side_index: usize,
     pub album_id: String,
     pub rpm: String,
+    pub grooves: Vec<GrooveBand>,
+    pub record_radius: f64,
     pub track_index: usize,
     pub track_number: u32,
     pub track_title: String,
@@ -40,6 +47,7 @@ pub struct Session {
     current_rpm: AtomicU32,
     album_id: Mutex<String>,
     side_index: AtomicU32,
+    format: Mutex<DiscFormat>,
 }
 
 fn store_f32(atomic: &AtomicU32, value: f32) {
@@ -70,6 +78,7 @@ impl Session {
             current_rpm: AtomicU32::new((33.333f32).to_bits()),
             album_id: Mutex::new(String::new()),
             side_index: AtomicU32::new(0),
+            format: Mutex::new(DiscFormat::Lp12),
         }
     }
 
@@ -88,8 +97,18 @@ impl Session {
         }
     }
 
-    pub fn load(self: &Arc<Self>, album_id: &str, side_index: usize, side: &Side, autoplay: bool) {
+    pub fn load(
+        self: &Arc<Self>,
+        album_id: &str,
+        side_index: usize,
+        side: &Side,
+        format: DiscFormat,
+        autoplay: bool,
+    ) {
         let session = Arc::clone(self);
+        if let Ok(mut slot) = self.format.lock() {
+            *slot = format;
+        }
         if let Ok(mut slot) = self.album_id.lock() {
             *slot = album_id.to_string();
         }
@@ -113,10 +132,9 @@ impl Session {
         }
 
         let side = side.clone();
-        let rate = self.output_rate.load(Ordering::Relaxed);
 
         std::thread::spawn(move || {
-            let (audio, issues) = decode::build_side(&side, &timeline, rate);
+            let (audio, issues) = decode::build_side(&side, &timeline, ENGINE_RATE);
             if session.token.load(Ordering::SeqCst) != token {
                 return;
             }
@@ -175,6 +193,20 @@ impl Session {
                 .cloned()
         });
 
+        let format = self
+            .format
+            .lock()
+            .map(|format| *format)
+            .unwrap_or(DiscFormat::Lp12);
+        let rpm = if load_f32(&self.current_rpm) >= 40.0 {
+            Rpm::R45
+        } else {
+            Rpm::R33
+        };
+        let layout = timeline
+            .as_ref()
+            .map(|timeline| GrooveLayout::for_side(timeline, format, rpm));
+
         PlaybackState {
             loaded: self.engine.has_side(),
             loading: self.loading.load(Ordering::Relaxed),
@@ -191,14 +223,12 @@ impl Session {
                 .lock()
                 .map(|id| id.clone())
                 .unwrap_or_default(),
-            rpm: format!(
-                "{}",
-                if load_f32(&self.current_rpm) >= 40.0 {
-                    45
-                } else {
-                    33
-                }
-            ),
+            rpm: format!("{}", if rpm == Rpm::R45 { 45 } else { 33 }),
+            grooves: layout
+                .as_ref()
+                .map(|layout| layout.bands.clone())
+                .unwrap_or_default(),
+            record_radius: layout.map(|layout| layout.record_radius).unwrap_or(151.0),
             track_index: track.map(|position| position.index).unwrap_or(0),
             track_number: track_span.as_ref().map(|track| track.number).unwrap_or(0),
             track_title: track_span.map(|track| track.title).unwrap_or_default(),

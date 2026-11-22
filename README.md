@@ -8,17 +8,22 @@ einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler und lässt dich 
 von Hand aufsetzen, am Teller scratchen, zwischen 33⅓ und 45 umschalten und Alben wie
 echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler Nadelphysik.
 
-> **Status:** Phase 2 — Audio. Bibliothek scannen, Album auflegen, Start/Stop,
-> Seite A/B wechseln, 33⅓/45 umschalten. Die Platte dreht sich und die Seite endet
-> von selbst.
+> **Status:** Phase 2 — Audio und Rillen. Bibliothek scannen, Album auflegen, Start/Stop,
+> Seite A/B wechseln, 33⅓/45 umschalten. Die Platte zeigt die Track-Bänder als Rillen,
+> dreht sich und die Seite endet von selbst.
 
-![Longplay mit geladenem Album](docs/phase1.png)
+![Longplay mit geladenem Album](docs/phase2.png)
 
 **Audio:** Eine Seite wird beim Auflegen komplett dekodiert (48 kHz stereo), inklusive
 Pregaps. Wiedergabe läuft über einen Catmull-Rom-Resampler mit Varispeed; Knistern,
 Rumpeln, Nadel-Fall, Wow/Flutter und Innenrillen-Charakter werden prozedural erzeugt.
-Auf macOS geht es über CoreAudio (cpal), auf Linux läuft zum Entwickeln ein
-Echtzeit-Null-Sink, weil hier die ALSA-Header fehlen.
+Auf macOS geht es über CoreAudio (cpal) mit dem **Standard-Ausgabegerät**; Stereo liegt
+auf den ersten beiden Kanälen, weitere Ausgänge eines Interfaces bleiben still. Es gibt
+bewusst keinen Geräte-Picker: was macOS als Standardausgabe führt, wird benutzt.
+
+Die Rillen sind kein Dekor: Ein Layout teilt die Spielfläche zeitlich in Track-Bänder,
+Pausen und Auslaufrille. Dasselbe Layout wird in Phase 3 den Tonarm führen.
+Auf Linux läuft zum Entwickeln ein Echtzeit-Null-Sink, weil hier die ALSA-Header fehlen.
 
 ## Prinzipien
 

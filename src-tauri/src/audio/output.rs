@@ -21,30 +21,49 @@ pub fn start(engine: Arc<Engine>) -> Result<u32, String> {
             let device = host
                 .default_output_device()
                 .ok_or_else(|| "kein Ausgabegerät gefunden".to_string())?;
-            let supported = device
+            let mut supported = device
                 .default_output_config()
                 .map_err(|error| error.to_string())?;
 
-            if supported.channels() != 2 {
-                return Err(format!(
-                    "Ausgabegerät hat {} Kanäle, Longplay braucht Stereo",
-                    supported.channels()
-                ));
-            }
+            // CoreAudio exposes f32 for virtually every device. If the default
+            // config uses another format, look for an f32 config at the same
+            // rate instead of failing.
             if supported.sample_format() != cpal::SampleFormat::F32 {
-                return Err(format!(
-                    "Ausgabegerät liefert {:?}, Longplay braucht f32",
-                    supported.sample_format()
-                ));
+                let rate = supported.sample_rate();
+                let fallback = device
+                    .supported_output_configs()
+                    .map_err(|error| error.to_string())?
+                    .find(|range| range.sample_format() == cpal::SampleFormat::F32)
+                    .map(|range| range.with_sample_rate(rate));
+                match fallback {
+                    Some(config) => supported = config,
+                    None => {
+                        return Err(format!(
+                            "Ausgabegerät liefert {:?}, kein f32-Ausgang verfügbar",
+                            supported.sample_format()
+                        ));
+                    }
+                }
+            }
+
+            let channels = usize::from(supported.channels());
+            if channels == 0 {
+                return Err("Ausgabegerät meldet keine Kanäle".to_string());
             }
 
             let config = supported.config();
             let rate = config.sample_rate;
+            let name = device.name().unwrap_or_default();
+            eprintln!("Audio: {name}, {channels} Kanäle, {rate} Hz");
+
             let mut dsp = super::engine::DspState::new();
+            let mut scratch = Vec::new();
             let stream = device
                 .build_output_stream(
                     config,
-                    move |data: &mut [f32], _| engine.process(data, rate, &mut dsp),
+                    move |data: &mut [f32], _| {
+                        engine.process_device(data, channels, rate, &mut dsp, &mut scratch);
+                    },
                     |error| eprintln!("Audio-Ausgabe: {error}"),
                     None,
                 )
@@ -78,9 +97,10 @@ pub fn start(engine: Arc<Engine>) -> Result<u32, String> {
     let rate = 48_000;
     std::thread::spawn(move || {
         let mut dsp = super::engine::DspState::new();
+        let mut scratch = Vec::new();
         let mut buffer = vec![0.0f32; 480 * 2];
         loop {
-            engine.process(&mut buffer, rate, &mut dsp);
+            engine.process_device(&mut buffer, 2, rate, &mut dsp, &mut scratch);
             std::thread::sleep(Duration::from_millis(10));
         }
     });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Album, PlaybackState, Side } from "$lib/types";
+  import type { Album, GrooveBand, PlaybackState, Side } from "$lib/types";
   import { formatClock } from "$lib/playback.svelte";
   import Vinyl from "./Vinyl.svelte";
 
@@ -8,12 +8,13 @@
     side: Side | null;
     sideIndex: number;
     playback: PlaybackState | null;
+    grooves: GrooveBand[];
     onSide: (index: number) => void;
     onToggle: () => void;
     onRpm: (rpm: number) => void;
   }
 
-  let { album, side, sideIndex, playback, onSide, onToggle, onRpm }: Props = $props();
+  let { album, side, sideIndex, playback, grooves, onSide, onToggle, onRpm }: Props = $props();
 
   const playing = $derived(!!playback?.playing && !playback.loading);
   const loading = $derived(!!playback?.loading);
@@ -48,7 +49,7 @@
         </svg>
 
         {#if album && side}
-          <Vinyl {album} {side} spinning={playing} />
+          <Vinyl {album} {side} {grooves} spinning={playing} />
         {:else}
           <div class="mat"></div>
           <div class="spindle"></div>

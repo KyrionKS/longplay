@@ -331,15 +331,21 @@ Messung auf einer echten Bibliothek steht noch aus; kaputte Tags landen als Scan
 - [x] Rate/Volume/Character über Atomare, RPM über IPC
 
 **Abweichung vom Plan:** Statt eines 45-s-Ringpuffers wird die komplette Seite
-vorgeladen (22 min ≈ 63 MB). Das macht Seek und Scratch sample-genau, ohne
-Decoder-Thread im Audio-Callback. Streaming kann später ergänzt werden, wenn
-Ladezeiten oder Speicher zum Problem werden.
+vorgeladen (48 kHz stereo f32, 22 min ≈ 500 MB). Das macht Seek und Scratch
+sample-genau, ohne Decoder-Thread im Audio-Callback. Streaming folgt, wenn
+Speicher oder Ladezeiten zum Problem werden. Die Seite wird immer mit 48 kHz
+gehalten; 96-kHz-Interfaces werden erst in der Wiedergabe hochgerechnet.
 
 **Abnahme:** Album läuft, Seek sample-genau, Ratenwechsel ohne Klicks, Seitenende
 stoppt. Auf macOS/CPU noch nicht gemessen; Linux-Dev nutzt einen Null-Sink.
 
+**Ausgabe:** Standardgerät, kein Picker. Alle Kanäle werden akzeptiert; Stereo geht
+auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird heruntergemischt.
+
 ### Phase 3 — Turntable
 
+- [x] Rillen-Layout pro Track, Pausen und Auslaufrille (Canvas, vorgezogen)
+- [ ] Tonarm an das Rillen-Layout koppeln
 - [ ] Teller-Physik, Start/Stop
 - [ ] Tonarm-Ziehen, Cueing, Radius-Mapping, Auto-Return
 - [ ] Scratch vorwärts/rückwärts, Auslauf

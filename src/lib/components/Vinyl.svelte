@@ -1,8 +1,13 @@
 <script lang="ts">
-  import type { Album, Side } from "$lib/types";
+  import type { Album, GrooveBand, Side } from "$lib/types";
   import { formatDuration } from "$lib/library.svelte";
 
-  let { album, side, spinning = false }: { album: Album; side: Side; spinning?: boolean } = $props();
+  let {
+    album,
+    side,
+    spinning = false,
+    grooves = [],
+  }: { album: Album; side: Side; spinning?: boolean; grooves?: GrooveBand[] } = $props();
 
   const sideDuration = $derived(
     side.tracks.reduce((total, track) => total + track.duration + track.pregap, 0),
@@ -11,10 +16,94 @@
     sideDuration >= 60 ? `${Math.round(sideDuration / 60)} MIN` : formatDuration(sideDuration),
   );
   const rpm = $derived(side.rpm === "45" ? "45" : "33⅓");
+
+  let canvas: HTMLCanvasElement | undefined = $state();
+  let host: HTMLDivElement | undefined = $state();
+  let size = $state(0);
+  let lastKey = "";
+
+  $effect(() => {
+    if (!host) return;
+    const observer = new ResizeObserver((entries) => {
+      size = entries[0]?.contentRect.width ?? host!.clientWidth;
+    });
+    observer.observe(host);
+    size = host.clientWidth;
+    return () => observer.disconnect();
+  });
+
+  $effect(() => {
+    if (!canvas || size <= 0) return;
+    const key = `${size}|${grooves.length}|${grooves
+      .map((band) => `${band.startNorm.toFixed(5)}:${band.endNorm.toFixed(5)}`)
+      .join(",")}`;
+    if (key === lastKey) return;
+    lastKey = key;
+    drawGrooves(canvas, size, grooves);
+  });
+
+  function drawGrooves(target: HTMLCanvasElement, width: number, bands: GrooveBand[]) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const pixels = Math.max(1, Math.round(width * dpr));
+    if (target.width !== pixels || target.height !== pixels) {
+      target.width = pixels;
+      target.height = pixels;
+    }
+    const context = target.getContext("2d");
+    if (!context) return;
+
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    context.clearRect(0, 0, width, width);
+    const center = width / 2;
+    const tau = Math.PI * 2;
+
+    for (const band of bands) {
+      const outer = band.startNorm * center;
+      const inner = band.endNorm * center;
+      const bandWidth = outer - inner;
+      if (bandWidth <= 0.15) continue;
+
+      if (band.kind === "track") {
+        for (let radius = outer - 0.35; radius > inner; radius -= 0.8) {
+          const alpha = 0.07 + 0.045 * (0.5 + 0.5 * Math.sin(radius * 1.9));
+          context.beginPath();
+          context.arc(center, center, radius, 0, tau);
+          context.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+          context.lineWidth = 0.6;
+          context.stroke();
+        }
+        for (const [edge, alpha] of [
+          [outer, 0.2],
+          [inner, 0.14],
+        ] as const) {
+          context.beginPath();
+          context.arc(center, center, edge, 0, tau);
+          context.strokeStyle = `rgba(255,255,255,${alpha})`;
+          context.lineWidth = 1;
+          context.stroke();
+        }
+      } else if (band.kind === "gap") {
+        context.beginPath();
+        context.arc(center, center, (outer + inner) / 2, 0, tau);
+        context.strokeStyle = "rgba(0,0,0,0.38)";
+        context.lineWidth = Math.max(1.4, bandWidth);
+        context.stroke();
+      } else {
+        for (let radius = outer; radius > inner; radius -= 2.4) {
+          context.beginPath();
+          context.arc(center, center, radius, 0, tau);
+          context.strokeStyle = "rgba(255,255,255,0.03)";
+          context.lineWidth = 0.5;
+          context.stroke();
+        }
+      }
+    }
+  }
 </script>
 
 <div
   class="vinyl"
+  bind:this={host}
   style:--vinyl={album.palette.vinyl}
   style:--light={album.palette.vinylLight}
   style:--label={album.palette.label}
@@ -27,6 +116,7 @@
     aria-hidden="true"
   >
     <div class="grooves"></div>
+    <canvas class="grooves-canvas" bind:this={canvas} aria-hidden="true"></canvas>
 
     <div class="label">
       <div class="top">
@@ -86,6 +176,15 @@
     }
   }
 
+  .grooves-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
   .grooves {
     position: absolute;
     inset: 0;
@@ -98,7 +197,7 @@
         transparent 2.4px 3.6px
       );
     mask: radial-gradient(circle at 50% 50%, transparent 0 34%, #000 35.5% 100%);
-    opacity: 0.75;
+    opacity: 0.3;
   }
 
   .sheen {

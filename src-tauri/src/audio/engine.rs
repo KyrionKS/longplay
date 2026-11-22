@@ -173,7 +173,54 @@ impl Engine {
         load_f32(&self.character)
     }
 
-    /// Renders one device buffer. `out` is interleaved stereo f32.
+    /// Renders one device buffer with an arbitrary channel count.
+    ///
+    /// The mix is stereo; on a multi-output interface the first two channels
+    /// carry left/right and the remaining outputs stay silent. Mono devices get
+    /// a downmix. `scratch` is reused between calls so the callback does not
+    /// allocate.
+    pub fn process_device(
+        &self,
+        out: &mut [f32],
+        channels: usize,
+        device_rate: u32,
+        dsp: &mut DspState,
+        scratch: &mut Vec<f32>,
+    ) {
+        if channels == 0 {
+            out.fill(0.0);
+            return;
+        }
+
+        let frames = out.len() / channels;
+        if frames == 0 {
+            return;
+        }
+
+        scratch.resize(frames * 2, 0.0);
+        self.process(&mut scratch[..frames * 2], device_rate, dsp);
+
+        if channels == 1 {
+            for frame in 0..frames {
+                out[frame] = (scratch[frame * 2] + scratch[frame * 2 + 1]) * 0.5;
+            }
+        } else {
+            for frame in 0..frames {
+                out[frame * channels] = scratch[frame * 2];
+                out[frame * channels + 1] = scratch[frame * 2 + 1];
+                for channel in 2..channels {
+                    out[frame * channels + channel] = 0.0;
+                }
+            }
+        }
+
+        let used = frames * channels;
+        if used < out.len() {
+            out[used..].fill(0.0);
+        }
+    }
+
+    /// Renders interleaved stereo f32.
     pub fn process(&self, out: &mut [f32], device_rate: u32, dsp: &mut DspState) {
         out.fill(0.0);
         if out.len() < 2 {
@@ -403,6 +450,67 @@ mod tests {
         engine.play();
         assert!(engine.is_playing());
         assert_eq!(engine.position_frames(), 0);
+    }
+
+    #[test]
+    fn maps_stereo_onto_a_multichannel_interface() {
+        let engine = Engine::new();
+        engine.set_side(Some(side(1.0, 440.0, 0.5)));
+        engine.set_character(0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut scratch = Vec::new();
+        let mut out = vec![0.0; 480 * 6];
+        engine.process_device(&mut out, 6, 48_000, &mut dsp, &mut scratch);
+
+        assert!(
+            (0..480).any(|frame| out[frame * 6].abs() > 0.0),
+            "left channel missing"
+        );
+        for frame in 0..480 {
+            for channel in 2..6 {
+                assert_eq!(out[frame * 6 + channel], 0.0, "unused output not silent");
+            }
+        }
+
+        let reference_engine = Engine::new();
+        reference_engine.set_side(Some(side(1.0, 440.0, 0.5)));
+        reference_engine.set_character(0.0);
+        reference_engine.play();
+        let mut reference_dsp = DspState::new();
+        let mut stereo = vec![0.0; 480 * 2];
+        reference_engine.process(&mut stereo, 48_000, &mut reference_dsp);
+
+        for frame in 0..480 {
+            assert!((out[frame * 6] - stereo[frame * 2]).abs() < 1e-6);
+            assert!((out[frame * 6 + 1] - stereo[frame * 2 + 1]).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn downmixes_for_mono_devices() {
+        let engine = Engine::new();
+        engine.set_side(Some(side(1.0, 440.0, 0.4)));
+        engine.set_character(0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut scratch = Vec::new();
+        let mut out = vec![0.0; 480];
+        engine.process_device(&mut out, 1, 48_000, &mut dsp, &mut scratch);
+        assert!(out.iter().any(|value| value.abs() > 0.0));
+        assert!(out.iter().all(|value| value.abs() <= 0.4 + 1e-6));
+    }
+
+    #[test]
+    fn ignores_an_incomplete_frame() {
+        let engine = Engine::new();
+        engine.set_side(Some(side(1.0, 440.0, 0.5)));
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut scratch = Vec::new();
+        let mut out = vec![1.0; 480 * 2 + 1];
+        engine.process_device(&mut out, 2, 48_000, &mut dsp, &mut scratch);
+        assert_eq!(out[out.len() - 1], 0.0);
     }
 
     #[test]

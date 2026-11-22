@@ -6,6 +6,7 @@
 
 pub mod decode;
 pub mod engine;
+pub mod groove;
 pub mod noise;
 pub mod output;
 pub mod resample;
@@ -13,5 +14,6 @@ pub mod session;
 pub mod timeline;
 
 pub use engine::{DspState, Engine};
+pub use groove::{GrooveBand, GrooveKind, GrooveLayout};
 pub use session::{PlaybackState, Session};
 pub use timeline::{SideTimeline, TrackPosition, TrackSpan};
