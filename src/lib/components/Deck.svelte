@@ -102,7 +102,6 @@
     if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
     if (atEnd) return REST_PHI;
-    if (!playback.playing && playback.position < 0.05) return REST_PHI;
     return PIVOT_ANGLE + Math.PI - playback.armAngle;
   });
 
@@ -461,29 +460,22 @@
 
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${phiDeg})`}>
           <rect
-            x={-armLengthPx * 0.095}
-            y={-armLengthPx * 0.03}
-            width={armLengthPx * 0.085}
-            height={armLengthPx * 0.06}
+            x={-armLengthPx * 0.055}
+            y={-armLengthPx * 0.024}
+            width={armLengthPx * 0.06}
+            height={armLengthPx * 0.048}
             rx="3"
             fill="#1c1c1c"
           />
           <rect
-            x={-armLengthPx * 0.08}
-            y={-armLengthPx * 0.022}
-            width={armLengthPx * 0.05}
-            height={armLengthPx * 0.044}
+            x={-armLengthPx * 0.048}
+            y={-armLengthPx * 0.018}
+            width={armLengthPx * 0.036}
+            height={armLengthPx * 0.036}
             rx="2"
             fill="#b5342a"
           />
-          <rect
-            x={-armLengthPx * 0.012}
-            y={-armLengthPx * 0.008}
-            width={armLengthPx * 0.022}
-            height={armLengthPx * 0.016}
-            rx="1"
-            fill="#cfcfcf"
-          />
+          <circle r={Math.max(1.6, armLengthPx * 0.006)} fill="#e8e8e8" />
         </g>
       </g>
     </svg>

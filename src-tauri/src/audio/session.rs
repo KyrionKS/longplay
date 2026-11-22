@@ -609,6 +609,12 @@ mod tests {
         session.load("album", 0, &side, DiscFormat::Lp12, true);
 
         wait_until(|| session.state().loaded);
+        let first = session.state();
+        assert!(
+            (first.stylus_radius - 132.0).abs() < 1.0,
+            "first groove at {} mm",
+            first.stylus_radius
+        );
         wait_until(|| session.state().position > 1.15);
         let state = session.state();
         assert_eq!(state.track_index, 1, "did not advance to the next track");

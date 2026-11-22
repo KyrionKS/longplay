@@ -75,7 +75,10 @@ impl GrooveLayout {
         let outer = geometry.outer_radius;
         let inner = geometry.inner_radius;
         let label_radius = record_radius * 0.36;
-        let available = (outer - inner).max(1.0);
+        // Real records have a lead-in groove; a slightly wider one keeps the
+        // cartridge visibly on the record at the first track.
+        let music_outer = outer - if single { 13.0 } else { 14.0 };
+        let available = (music_outer - inner).max(1.0);
         let min_gap = if single { 2.2 } else { 1.6 };
 
         let total_duration: f64 = timeline
@@ -112,15 +115,15 @@ impl GrooveLayout {
         }
 
         let music_width = (available - gap_sum).max(0.0);
-        let mut cursor = outer;
+        let mut cursor = music_outer;
         let mut time_cursor = 0.0;
         let mut bands = vec![GrooveBand {
             kind: GrooveKind::LeadIn,
             track_index: None,
             start: record_radius,
-            end: outer,
+            end: music_outer,
             start_norm: 1.0,
-            end_norm: outer / record_radius,
+            end_norm: music_outer / record_radius,
             start_time: 0.0,
             end_time: 0.0,
         }];
@@ -226,7 +229,7 @@ mod tests {
         }
         let start = layout.radius_for_time(0.0).unwrap();
         let end = layout.radius_for_time(453.0).unwrap();
-        assert!((start - 146.0).abs() < 1e-9);
+        assert!((start - 132.0).abs() < 1e-9);
         assert!(end <= 60.0 + 1e-6);
     }
 
@@ -247,6 +250,7 @@ mod tests {
         let layout = layout(&[300.0, 180.0, 240.0], &[1.5, 1.5, 1.5]);
         assert_eq!(layout.bands.first().unwrap().kind, GrooveKind::LeadIn);
         assert_eq!(layout.bands.first().unwrap().start, 151.0);
+        assert!((layout.bands.first().unwrap().end - 132.0).abs() < 1e-9);
         for pair in layout.bands.windows(2) {
             assert!((pair[0].end - pair[1].start).abs() < 1e-6);
             assert!(pair[0].start >= pair[0].end);
