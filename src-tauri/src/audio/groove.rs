@@ -49,7 +49,6 @@ struct Dimensions {
     music_outer: f64,
     music_inner: f64,
     runout_end: f64,
-    land: f64,
 }
 
 fn dimensions(single: bool) -> Dimensions {
@@ -59,7 +58,6 @@ fn dimensions(single: bool) -> Dimensions {
             music_outer: 84.0,
             music_inner: 45.0,
             runout_end: 43.0,
-            land: 1.6,
         }
     } else {
         Dimensions {
@@ -67,7 +65,6 @@ fn dimensions(single: bool) -> Dimensions {
             music_outer: 146.0,
             music_inner: 60.0,
             runout_end: 54.0,
-            land: 1.8,
         }
     }
 }
@@ -104,22 +101,34 @@ impl GrooveLayout {
             .map(|track| track.duration.max(0.0))
             .sum();
 
-        // Every track after the first gets a land; a pregap before the first
-        // track is a land as well. The lands are subtracted from the music area
-        // so the last track still ends at the inner groove.
-        let gaps: Vec<bool> = timeline
+        // Each track gets a land before it. A real pregap gets a wider land;
+        // a gapless boundary gets a hairline so the following track does not
+        // drift inwards. The lands are subtracted from the music area.
+        let base_land = if single { 0.2 } else { 0.25 };
+        let mut gap_widths: Vec<f64> = timeline
             .tracks
             .iter()
             .enumerate()
-            .map(|(index, track)| index > 0 || track.pregap > 0.01)
+            .map(|(index, track)| {
+                if index == 0 && track.pregap <= 0.01 {
+                    0.0
+                } else if track.pregap > 0.01 {
+                    (0.25 + track.pregap * 0.35).clamp(0.4, 1.4)
+                } else {
+                    base_land
+                }
+            })
             .collect();
-        let gap_count = gaps.iter().filter(|gap| **gap).count();
-        let land = if gap_count > 0 {
-            dims.land.min(music_area * 0.3 / gap_count as f64)
-        } else {
-            0.0
-        };
-        let music_width = (music_area - land * gap_count as f64).max(0.0);
+        let mut gap_total: f64 = gap_widths.iter().sum();
+        let gap_budget = music_area * 0.3;
+        if gap_total > gap_budget && gap_total > 0.0 {
+            let factor = gap_budget / gap_total;
+            for gap in &mut gap_widths {
+                *gap *= factor;
+            }
+            gap_total = gap_budget;
+        }
+        let music_width = (music_area - gap_total).max(0.0);
 
         let mut cursor = dims.music_outer;
         let mut time_cursor = 0.0;
@@ -135,20 +144,20 @@ impl GrooveLayout {
         }];
 
         for (index, track) in timeline.tracks.iter().enumerate() {
-            if gaps[index] {
-                let gap_time = track.pregap;
+            let gap = gap_widths[index];
+            if gap > 0.001 {
                 bands.push(GrooveBand {
                     kind: GrooveKind::Gap,
                     track_index: Some(index),
                     start: cursor,
-                    end: cursor - land,
+                    end: cursor - gap,
                     start_norm: cursor / record_radius,
-                    end_norm: (cursor - land) / record_radius,
+                    end_norm: (cursor - gap) / record_radius,
                     start_time: time_cursor,
-                    end_time: time_cursor + gap_time,
+                    end_time: time_cursor + track.pregap,
                 });
-                cursor -= land;
-                time_cursor += gap_time;
+                cursor -= gap;
+                time_cursor += track.pregap;
             }
 
             let width = if total_duration > 0.0 {
@@ -266,17 +275,18 @@ mod tests {
     }
 
     #[test]
-    fn lands_are_visible_but_do_not_eat_the_record() {
-        let layout = layout(&[300.0, 250.0, 200.0], &[0.0, 1.5, 1.5]);
+    fn lands_follow_the_real_pauses() {
+        let layout = layout(&[300.0, 250.0, 200.0], &[0.0, 1.5, 0.0]);
         let lands: Vec<_> = layout
             .bands
             .iter()
             .filter(|band| band.kind == GrooveKind::Gap)
             .collect();
         assert_eq!(lands.len(), 2);
-        for land in lands {
-            assert!(land.start - land.end >= 1.0);
-        }
+        let pause = lands[0].start - lands[0].end;
+        let gapless = lands[1].start - lands[1].end;
+        assert!((0.6..=1.0).contains(&pause), "pause land {pause}");
+        assert!(gapless <= 0.3, "gapless land {gapless}");
     }
 
     #[test]
