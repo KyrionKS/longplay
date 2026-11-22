@@ -130,6 +130,12 @@ fn playback_seek(seconds: f64, state: tauri::State<'_, AppState>) -> PlaybackSta
 }
 
 #[tauri::command]
+fn playback_cue(seconds: f64, state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.cue(seconds);
+    state.playback.state()
+}
+
+#[tauri::command]
 fn playback_set_rpm(rpm: u32, state: tauri::State<'_, AppState>) -> PlaybackState {
     state.playback.set_rpm(rpm);
     state.playback.state()
@@ -183,6 +189,7 @@ pub fn run() {
             playback_pause,
             playback_stop,
             playback_seek,
+            playback_cue,
             playback_set_rpm
         ])
         .run(tauri::generate_context!())

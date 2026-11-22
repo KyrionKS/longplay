@@ -3,7 +3,7 @@
 Ein skeuomorpher Plattenspieler für die eigene Musiksammlung auf macOS.
 Arbeitstitel: **Longplay** (Namenskollision mit longplay.app beachten, finaler Name vor Phase 5).
 
-**Status 2026-11-22:** Phase 0 bis 2 umgesetzt. Nächster Schritt: Phase 3 (Turntable-Interaktion).
+**Status 2026-11-22:** Phase 0 bis 2 und der Interaktionskern von Phase 3 sind umgesetzt. Offen: Material/Licht der Ästhetik.
 
 ---
 
@@ -374,16 +374,18 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 ### Phase 3 — Turntable
 
 - [x] Rillen-Layout pro Track, Pausen und Auslaufrille (Canvas, vorgezogen)
-- [ ] Tonarm folgt dem Rillen-Layout (Winkel aus der Side-Position)
-- [ ] Teller-Physik: Anlauf, Auslauf, Start/Stop
-- [ ] Tonarm ziehen und cueen (ohne Scratch), Nadel-Fall
-- [ ] Auto-Return und Locked-Groove am Seitenende
-- [ ] 33/45 (Tonhöhe und Tempo)
-- [ ] Seiten-Zustandsmaschine + Flip-Animation
-- [ ] Ästhetik-Pass (siehe Abschnitt 9)
+- [x] Tonarm folgt dem Rillen-Layout (Winkel aus der Side-Position)
+- [x] Teller-Physik: Anlauf, Auslauf, Start/Stop
+- [x] Tonarm ziehen und cueen (ohne Scratch), Nadel-Fall
+- [x] Auto-Return am Seitenende
+- [x] 33/45 (Tonhöhe und Tempo)
+- [x] Seiten-Flip-Animation und 7″-Darstellung
+- [ ] Locked-Groove-Thump am Seitenende
+- [ ] Ästhetik-Pass: Abrieb, Matrix-Ritzung, Staub, Licht, Hüllen-Animation, Gatefold
 
 **Abnahme:** Armwinkel und Rillenposition stimmen überein, Cueing sitzt auf dem
 gewählten Track, Seitenwechsel und Flip laufen rund, 60 fps. Kein Scratch.
+Der Interaktionskern ist erreicht; die Material- und Lichtpolitur folgt im Ästhetik-Pass.
 
 ### Phase 4 — Optik
 

@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import type { Album, GrooveBand, PlaybackState, Side } from "$lib/types";
-  import { formatClock } from "$lib/playback.svelte";
+  import { cuePlayback, formatClock, pausePlayback } from "$lib/playback.svelte";
+  import { cuePointForRadius, thetaForRadius } from "$lib/groove";
   import Vinyl from "./Vinyl.svelte";
 
   interface Props {
@@ -14,9 +16,10 @@
     onRpm: (rpm: number) => void;
   }
 
-  let { album, side, sideIndex, playback, grooves, onSide, onToggle, onRpm }: Props = $props();
+  let { album, side, sideIndex, playback, grooves, onSide, onToggle, onRpm }: Props =
+    $props();
 
-  const playing = $derived(!!playback?.playing && !playback.loading);
+  const playing = $derived(!!playback?.playing && !playback?.loading);
   const loading = $derived(!!playback?.loading);
   const rpmValue = $derived(
     playback?.rpm === "45" || (!playback && side?.rpm === "45") ? 45 : 33,
@@ -24,6 +27,175 @@
   const rpmLabel = $derived(rpmValue === 45 ? "45" : "33⅓");
   const position = $derived(playback?.position ?? 0);
   const duration = $derived(playback?.duration ?? 0);
+  const atEnd = $derived(
+    !!playback && duration > 0 && !playback.playing && position >= duration - 0.08,
+  );
+
+  const REST_PHI = 1.26;
+
+  let stageEl: HTMLDivElement | undefined = $state();
+  let platterEl: HTMLDivElement | undefined = $state();
+  let stageW = $state(0);
+  let stageH = $state(0);
+  let centerX = $state(0);
+  let centerY = $state(0);
+  let platterRadius = $state(0);
+
+  $effect(() => {
+    const stage = stageEl;
+    const platter = platterEl;
+    if (!stage || !platter) return;
+
+    const measure = () => {
+      const stageRect = stage.getBoundingClientRect();
+      const platterRect = platter.getBoundingClientRect();
+      stageW = stageRect.width;
+      stageH = stageRect.height;
+      centerX = platterRect.left - stageRect.left + platterRect.width / 2;
+      centerY = platterRect.top - stageRect.top + platterRect.height / 2;
+      platterRadius = platterRect.width / 2;
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    observer.observe(platter);
+    return () => observer.disconnect();
+  });
+
+  const REFERENCE_MM = 151;
+  const mmToPx = $derived((platterRadius * 0.94) / REFERENCE_MM);
+  const pivotDistance = $derived(playback?.pivotDistance ?? 211);
+  const armLength = $derived(playback?.armLength ?? 230);
+  // The pivot sits up-right of the spindle, like a real deck.
+  const PIVOT_ANGLE = -0.34;
+  const pivotX = $derived(centerX + pivotDistance * mmToPx * Math.cos(PIVOT_ANGLE));
+  const pivotY = $derived(centerY + pivotDistance * mmToPx * Math.sin(PIVOT_ANGLE));
+  const armLengthPx = $derived(armLength * mmToPx);
+
+  let dragging = $state(false);
+  let manualPhi = $state(REST_PHI);
+  let cueTime = $state(0);
+  let cueTrackIndex = $state<number | null>(null);
+  let cueX = $state(0);
+  let cueY = $state(0);
+  let hoverTrackIndex = $state<number | null>(null);
+  let hoverX = $state(0);
+  let hoverY = $state(0);
+
+  const cueTrack = $derived(
+    cueTrackIndex !== null ? (side?.tracks[cueTrackIndex] ?? null) : null,
+  );
+  const hoverTrack = $derived(
+    hoverTrackIndex !== null ? (side?.tracks[hoverTrackIndex] ?? null) : null,
+  );
+
+  const statePhi = $derived.by(() => {
+    if (dragging) return manualPhi;
+    if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
+    if (atEnd) return REST_PHI;
+    if (!playback.playing && playback.position < 0.05) return REST_PHI;
+    return PIVOT_ANGLE + Math.PI - playback.armAngle;
+  });
+
+  let armPhi = $state(REST_PHI);
+
+  $effect(() => {
+    const target = statePhi;
+    const speed = dragging ? 30 : 8;
+    let frame = 0;
+    let last = performance.now();
+
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      untrack(() => {
+        if (Math.abs(target - armPhi) > 0.0004) {
+          armPhi += (target - armPhi) * (1 - Math.exp(-speed * dt));
+        }
+      });
+      frame = requestAnimationFrame(loop);
+    };
+
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  });
+
+  const stylusX = $derived(pivotX + armLengthPx * Math.cos(armPhi));
+  const stylusY = $derived(pivotY + armLengthPx * Math.sin(armPhi));
+  const phiDeg = $derived((armPhi * 180) / Math.PI);
+  const weightX = $derived(pivotX - Math.cos(armPhi) * armLengthPx * 0.24);
+  const weightY = $derived(pivotY - Math.sin(armPhi) * armLengthPx * 0.24);
+
+  function pointerInfo(event: PointerEvent) {
+    if (!stageEl || !platterEl || mmToPx <= 0) return null;
+    const stage = stageEl.getBoundingClientRect();
+    const platter = platterEl.getBoundingClientRect();
+    const dx = event.clientX - (platter.left + platter.width / 2);
+    const dy = event.clientY - (platter.top + platter.height / 2);
+    return {
+      x: event.clientX - stage.left,
+      y: event.clientY - stage.top,
+      radius: Math.hypot(dx, dy) / mmToPx,
+    };
+  }
+
+  function updateCue(event: PointerEvent) {
+    const info = pointerInfo(event);
+    if (!info || !playback) return;
+    const point = cuePointForRadius(playback.grooves, info.radius);
+    if (!point) return;
+    cueTime = point.time;
+    cueTrackIndex = point.trackIndex;
+    cueX = info.x;
+    cueY = info.y;
+    manualPhi =
+      PIVOT_ANGLE + Math.PI - thetaForRadius(point.radius, pivotDistance, armLength);
+  }
+
+  function updateHover(event: PointerEvent) {
+    if (!playback?.loaded || dragging || loading) {
+      hoverTrackIndex = null;
+      return;
+    }
+    const info = pointerInfo(event);
+    if (!info) return;
+    const point = cuePointForRadius(playback.grooves, info.radius);
+    if (!point || point.trackIndex === null) {
+      hoverTrackIndex = null;
+      return;
+    }
+    hoverTrackIndex = point.trackIndex;
+    hoverX = info.x;
+    hoverY = info.y;
+  }
+
+  function onPointerDown(event: PointerEvent) {
+    if (!album || !side || !playback?.loaded || loading) return;
+    dragging = true;
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    updateCue(event);
+    void pausePlayback();
+  }
+
+  function onPointerMove(event: PointerEvent) {
+    if (dragging) {
+      updateCue(event);
+    } else {
+      updateHover(event);
+    }
+  }
+
+  function onPointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    hoverTrackIndex = null;
+    void cuePlayback(cueTime);
+  }
+
+  function onPointerLeave() {
+    hoverTrackIndex = null;
+  }
 </script>
 
 <section class="deck" aria-label="Plattenspieler">
@@ -32,9 +204,20 @@
     <p>DIRECT DRIVE · MODEL 01</p>
   </header>
 
-  <div class="stage">
+  <div class="stage" bind:this={stageEl}>
     <div class="platter-wrap">
-      <div class="platter">
+      <div
+        class="platter"
+        class:dragging
+        role="group"
+        aria-label="Plattenteller — ziehen, um die Nadel zu setzen"
+        bind:this={platterEl}
+        onpointerdown={onPointerDown}
+        onpointermove={onPointerMove}
+        onpointerup={onPointerUp}
+        onpointercancel={onPointerUp}
+        onpointerleave={onPointerLeave}
+      >
         <div class="rim"></div>
         <svg class="strobe" viewBox="0 0 400 400" aria-hidden="true">
           <circle
@@ -49,7 +232,9 @@
         </svg>
 
         {#if album && side}
-          <Vinyl {album} {side} {grooves} spinning={playing} />
+          {#key `${album.id}:${side.label}`}
+            <Vinyl {album} {side} {grooves} spinning={playing || dragging} />
+          {/key}
         {:else}
           <div class="mat"></div>
           <div class="spindle"></div>
@@ -90,7 +275,24 @@
       {/if}
     </div>
 
-    <svg class="arm" viewBox="0 0 300 400" aria-hidden="true">
+    {#if dragging && cueTrack}
+      <div class="cue-badge" style:left={`${cueX}px`} style:top={`${cueY}px`}>
+        <span class="cue-time">{formatClock(cueTime)}</span>
+        <strong>{cueTrack.number}. {cueTrack.title}</strong>
+      </div>
+    {:else if hoverTrack && !dragging}
+      <div class="hover-badge" style:left={`${hoverX}px`} style:top={`${hoverY}px`}>
+        {hoverTrack.number}. {hoverTrack.title}
+      </div>
+    {/if}
+
+    <svg
+      class="arm-layer"
+      width={stageW}
+      height={stageH}
+      viewBox={`0 0 ${stageW} ${stageH}`}
+      aria-hidden="true"
+    >
       <defs>
         <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="#6d6d6d" />
@@ -116,47 +318,90 @@
       </defs>
 
       <g filter="url(#armShadow)">
-        <ellipse cx="214" cy="104" rx="46" ry="40" fill="url(#base)" opacity="0.95" />
-
-        <g class="moving" style:transform={album ? "rotate(22deg)" : "rotate(0deg)"}>
-          <g transform="rotate(-14 196 62)">
-            <rect x="180" y="26" width="30" height="62" rx="13" fill="url(#weight)" />
-            <rect
-              x="180"
-              y="26"
-              width="30"
-              height="62"
-              rx="13"
-              fill="none"
-              stroke="rgba(0,0,0,0.45)"
-            />
-          </g>
-
-          <path d="M214 96 L242 330" stroke="#0f0f0f" stroke-width="9" stroke-linecap="round" />
-          <path
-            d="M214 96 L242 330"
-            stroke="url(#chrome)"
-            stroke-width="5.5"
-            stroke-linecap="round"
-          />
-
-          <circle cx="214" cy="98" r="24" fill="url(#base)" />
-          <circle cx="214" cy="98" r="13" fill="#232323" stroke="rgba(255,255,255,0.25)" />
-          <circle cx="214" cy="98" r="4" fill="#0d0d0d" />
-          <circle cx="210" cy="94" r="2" fill="rgba(255,255,255,0.6)" />
-
-          <g transform="rotate(4 242 330)">
-            <rect x="232" y="318" width="20" height="42" rx="2.5" fill="#1c1c1c" />
-            <rect x="235" y="321" width="14" height="26" rx="1.5" fill="#b5342a" />
-            <rect x="237" y="349" width="10" height="9" rx="1" fill="#9a9a9a" />
-          </g>
-        </g>
+        <ellipse
+          cx={pivotX}
+          cy={pivotY}
+          rx={Math.max(28, armLengthPx * 0.1)}
+          ry={Math.max(25, armLengthPx * 0.09)}
+          fill="url(#base)"
+          opacity="0.95"
+        />
 
         <path
-          d="M258 286 l16 -10 l8 12 l-16 10 z"
-          fill="#2b2b2b"
-          stroke="rgba(255,255,255,0.14)"
+          d={`M${weightX} ${weightY} L${stylusX} ${stylusY}`}
+          stroke="#0d0d0d"
+          stroke-width="11"
+          stroke-linecap="round"
         />
+        <path
+          d={`M${weightX} ${weightY} L${stylusX} ${stylusY}`}
+          stroke="#c9c9c9"
+          stroke-width="7"
+          stroke-linecap="round"
+        />
+        <path
+          d={`M${pivotX} ${pivotY} L${stylusX} ${stylusY}`}
+          stroke="rgba(255,255,255,0.55)"
+          stroke-width="1.4"
+          stroke-linecap="round"
+        />
+
+        <g transform={`translate(${weightX} ${weightY}) rotate(${phiDeg})`}>
+          <rect
+            x={-armLengthPx * 0.08}
+            y={-armLengthPx * 0.042}
+            width={armLengthPx * 0.16}
+            height={armLengthPx * 0.084}
+            rx={armLengthPx * 0.04}
+            fill="url(#weight)"
+          />
+          <rect
+            x={-armLengthPx * 0.08}
+            y={-armLengthPx * 0.042}
+            width={armLengthPx * 0.16}
+            height={armLengthPx * 0.084}
+            rx={armLengthPx * 0.04}
+            fill="none"
+            stroke="rgba(0,0,0,0.45)"
+          />
+        </g>
+
+        <circle cx={pivotX} cy={pivotY} r={Math.max(16, armLengthPx * 0.062)} fill="url(#base)" />
+        <circle
+          cx={pivotX}
+          cy={pivotY}
+          r={Math.max(8, armLengthPx * 0.032)}
+          fill="#232323"
+          stroke="rgba(255,255,255,0.25)"
+        />
+        <circle cx={pivotX} cy={pivotY} r={Math.max(3, armLengthPx * 0.012)} fill="#0d0d0d" />
+
+        <g transform={`translate(${stylusX} ${stylusY}) rotate(${phiDeg})`}>
+          <rect
+            x={-armLengthPx * 0.095}
+            y={-armLengthPx * 0.03}
+            width={armLengthPx * 0.085}
+            height={armLengthPx * 0.06}
+            rx="3"
+            fill="#1c1c1c"
+          />
+          <rect
+            x={-armLengthPx * 0.08}
+            y={-armLengthPx * 0.022}
+            width={armLengthPx * 0.05}
+            height={armLengthPx * 0.044}
+            rx="2"
+            fill="#b5342a"
+          />
+          <rect
+            x={-armLengthPx * 0.012}
+            y={-armLengthPx * 0.008}
+            width={armLengthPx * 0.022}
+            height={armLengthPx * 0.016}
+            rx="1"
+            fill="#cfcfcf"
+          />
+        </g>
       </g>
     </svg>
   </div>
@@ -272,6 +517,9 @@
     width: 100%;
     aspect-ratio: 1;
     border-radius: 50%;
+    cursor: grab;
+    touch-action: none;
+    perspective: 1200px;
     background:
       radial-gradient(circle at 42% 34%, rgba(255, 255, 255, 0.11), transparent 42%),
       radial-gradient(circle at 50% 50%, #2c2c2c 0 62%, #1a1a1a 63% 100%);
@@ -281,17 +529,23 @@
       0 -2px 0 rgba(0, 0, 0, 0.6) inset;
   }
 
+  .platter.dragging {
+    cursor: grabbing;
+  }
+
   .strobe {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+    pointer-events: none;
   }
 
   .rim {
     position: absolute;
     inset: 0;
     border-radius: 50%;
+    pointer-events: none;
     background: conic-gradient(
       from 210deg,
       #585858,
@@ -354,6 +608,7 @@
     align-items: center;
     gap: 7px;
     max-width: 100%;
+    min-height: 58px;
   }
 
   .now-title {
@@ -410,20 +665,43 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .arm {
+  .arm-layer {
     position: absolute;
-    right: 1%;
-    top: 3%;
-    height: 92%;
-    width: auto;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     overflow: visible;
     pointer-events: none;
   }
 
-  .moving {
-    transform-origin: 214px 98px;
-    transform-box: view-box;
-    transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  .cue-badge,
+  .hover-badge {
+    position: absolute;
+    z-index: 6;
+    pointer-events: none;
+    transform: translate(14px, 14px);
+    padding: 5px 9px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    color: var(--cream);
+    background: rgba(18, 10, 5, 0.82);
+    box-shadow:
+      0 0 0 1px rgba(201, 162, 39, 0.35),
+      0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .hover-badge {
+    opacity: 0.85;
+    font-size: 8px;
+    color: rgba(239, 230, 207, 0.72);
+  }
+
+  .cue-badge .cue-time {
+    margin-right: 8px;
+    color: var(--brass-light);
+    font-variant-numeric: tabular-nums;
   }
 
   .controls {
@@ -470,11 +748,6 @@
   .start .primary {
     font-size: 10px;
     letter-spacing: 0.14em;
-  }
-
-  .start .sub {
-    font-size: 7px;
-    opacity: 0.65;
   }
 
   .rpm {

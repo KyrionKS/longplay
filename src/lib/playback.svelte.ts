@@ -54,6 +54,14 @@ export async function seekPlayback(seconds: number): Promise<void> {
   playback.state = await invoke<PlaybackState>("playback_seek", { seconds });
 }
 
+export async function cuePlayback(seconds: number): Promise<void> {
+  try {
+    playback.state = await invoke<PlaybackState>("playback_cue", { seconds });
+  } catch (error) {
+    playback.error = String(error);
+  }
+}
+
 export async function setRpm(rpm: number): Promise<void> {
   try {
     playback.state = await invoke<PlaybackState>("playback_set_rpm", { rpm });

@@ -8,11 +8,11 @@ Schallplatten in einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler
 lässt dich den Tonarm von Hand aufsetzen, zwischen 33⅓ und 45 umschalten und Alben wie
 echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler Nadelphysik.
 
-> **Status:** Phase 2 — Audio und Rillen. Bibliothek scannen, Album auflegen, Start/Stop,
-> Seite A/B wechseln, 33⅓/45 umschalten. Die Platte zeigt die Track-Bänder als Rillen,
-> dreht sich und die Seite endet von selbst.
+> **Status:** Phase 3 — Interaktion. Der Tonarm folgt der Rille, lässt sich zum Cueen
+> ziehen, kehrt am Seitenende zurück; die Platte dreht mit Anlauf und Auslauf, Singles
+> sind kleiner, Seite A/B flip. Material- und Lichtpolitur folgt.
 
-![Longplay mit geladenem Album](docs/phase2.png)
+![Longplay mit geladenem Album](docs/phase3.png)
 
 **Audio:** Es wird immer nur der aktuelle Song dekodiert (48 kHz stereo, inklusive
 Pregap); der nächste lädt im Hintergrund vor. Das ist für Bibliotheken auf einem NAS
@@ -45,6 +45,8 @@ npm run tauri dev
 
 Bedienung: Album anklicken legt es auf, `START/STOP` startet, die Tabs `A`/`B`
 wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
+Auf die Platte ziehen setzt die Nadel an der Stelle ab; beim Überfahren zeigt ein
+kleines Etikett den Track unter dem Zeiger.
 
 Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
 

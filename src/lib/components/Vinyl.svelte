@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import type { Album, GrooveBand, Side } from "$lib/types";
   import { formatDuration } from "$lib/library.svelte";
 
@@ -16,6 +17,33 @@
     sideDuration >= 60 ? `${Math.round(sideDuration / 60)} MIN` : formatDuration(sideDuration),
   );
   const rpm = $derived(side.rpm === "45" ? "45" : "33⅓");
+
+  let discAngle = $state(0);
+  let velocity = 0;
+
+  $effect(() => {
+    const target = spinning
+      ? (Math.PI * 2) / (side.rpm === "45" ? 1.333 : 1.8)
+      : 0;
+    let frame = 0;
+    let last = performance.now();
+
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const tau = target > velocity ? 0.5 : 2.4;
+      velocity += (target - velocity) * (1 - Math.exp(-dt / tau));
+      untrack(() => {
+        if (velocity > 1e-4 || target > 0) {
+          discAngle = (discAngle + velocity * dt) % (Math.PI * 2);
+        }
+      });
+      frame = requestAnimationFrame(loop);
+    };
+
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  });
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let host: HTMLDivElement | undefined = $state();
@@ -103,6 +131,7 @@
 
 <div
   class="vinyl"
+  class:single={side.rpm === "45"}
   bind:this={host}
   style:--vinyl={album.palette.vinyl}
   style:--light={album.palette.vinylLight}
@@ -111,8 +140,7 @@
 >
   <div
     class="disc-layer"
-    class:spinning
-    style:--period={side.rpm === "45" ? "1.333s" : "1.8s"}
+    style:transform={`rotate(${discAngle}rad)`}
     aria-hidden="true"
   >
     <div class="grooves"></div>
@@ -155,25 +183,36 @@
       0 0 0 1px rgba(0, 0, 0, 0.65),
       0 18px 34px rgba(0, 0, 0, 0.55),
       0 0 0 3px rgba(255, 255, 255, 0.04) inset;
-    animation: settle 520ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+    container-type: inline-size;
+    animation: vinyl-in 620ms cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  }
+
+  .vinyl.single {
+    inset: 24.5%;
+  }
+
+  .vinyl.single .label {
+    width: 46%;
+  }
+
+  .vinyl.single .title {
+    font-size: 2.9cqw;
+  }
+
+  .vinyl.single .artist {
+    font-size: 1.9cqw;
+  }
+
+  .vinyl.single .cat,
+  .vinyl.single .meta {
+    font-size: 1.4cqw;
   }
 
   .disc-layer {
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    animation: spin var(--period, 1.8s) linear infinite;
-    animation-play-state: paused;
-  }
-
-  .disc-layer.spinning {
-    animation-play-state: running;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
+    will-change: transform;
   }
 
   .grooves-canvas {
@@ -271,7 +310,7 @@
 
   .cat {
     font-family: var(--font-display);
-    font-size: 5.5px;
+    font-size: 1.18cqw;
     letter-spacing: 0.18em;
     opacity: 0.62;
     white-space: nowrap;
@@ -279,7 +318,7 @@
 
   .title {
     font-family: var(--font-display);
-    font-size: 11px;
+    font-size: 2.35cqw;
     line-height: 1.08;
     letter-spacing: 0.01em;
     max-width: 100%;
@@ -292,7 +331,7 @@
 
   .artist {
     font-family: var(--font-display);
-    font-size: 7.5px;
+    font-size: 1.6cqw;
     font-style: italic;
     opacity: 0.82;
     max-width: 100%;
@@ -302,7 +341,7 @@
   }
 
   .meta {
-    font-size: 5.5px;
+    font-size: 1.18cqw;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     opacity: 0.75;
@@ -327,14 +366,20 @@
       0 0 0 1px rgba(0, 0, 0, 0.45);
   }
 
-  @keyframes settle {
+  .vinyl.single .spindle {
+    width: 7%;
+  }
+
+  @keyframes vinyl-in {
     from {
       opacity: 0;
-      transform: scale(0.965);
+      transform: rotateY(74deg) scale(0.94);
+      filter: brightness(0.55);
     }
     to {
       opacity: 1;
-      transform: scale(1);
+      transform: rotateY(0deg) scale(1);
+      filter: brightness(1);
     }
   }
 </style>

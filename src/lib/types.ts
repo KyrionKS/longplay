@@ -62,6 +62,8 @@ export interface GrooveBand {
   end: number;
   startNorm: number;
   endNorm: number;
+  startTime: number;
+  endTime: number;
 }
 
 export interface PlaybackState {
@@ -76,6 +78,10 @@ export interface PlaybackState {
   rpm: string;
   grooves: GrooveBand[];
   recordRadius: number;
+  armAngle: number;
+  stylusRadius: number;
+  pivotDistance: number;
+  armLength: number;
   trackIndex: number;
   trackNumber: number;
   trackTitle: string;

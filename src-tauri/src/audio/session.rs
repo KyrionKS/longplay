@@ -33,6 +33,10 @@ pub struct PlaybackState {
     pub rpm: String,
     pub grooves: Vec<GrooveBand>,
     pub record_radius: f64,
+    pub arm_angle: f64,
+    pub stylus_radius: f64,
+    pub pivot_distance: f64,
+    pub arm_length: f64,
     pub track_index: usize,
     pub track_number: u32,
     pub track_title: String,
@@ -259,6 +263,15 @@ impl Session {
     }
 
     pub fn seek(self: &Arc<Self>, seconds: f64) {
+        self.seek_internal(seconds, false);
+    }
+
+    /// Cueing: seek and start playing once the target track is ready.
+    pub fn cue(self: &Arc<Self>, seconds: f64) {
+        self.seek_internal(seconds, true);
+    }
+
+    fn seek_internal(self: &Arc<Self>, seconds: f64, play_after: bool) {
         let Some(timeline) = self.timeline.lock().ok().and_then(|slot| slot.clone()) else {
             return;
         };
@@ -279,13 +292,16 @@ impl Session {
                 span.pregap + target.offset
             };
             self.engine.seek_local_seconds(local);
+            if play_after {
+                self.engine.play();
+            }
             return;
         }
 
         let Some(side) = self.side.lock().ok().and_then(|slot| slot.clone()) else {
             return;
         };
-        let was_playing = self.engine.is_playing();
+        let was_playing = play_after || self.engine.is_playing();
         let token = self.token.fetch_add(1, Ordering::SeqCst) + 1;
         self.loading.store(true, Ordering::Relaxed);
         self.engine.pause();
@@ -350,6 +366,17 @@ impl Session {
         let layout = timeline
             .as_ref()
             .map(|timeline| GrooveLayout::for_side(timeline, format, rpm));
+        let single = format == DiscFormat::Single7 || rpm == Rpm::R45;
+        let geometry = if single {
+            crate::playback::TonearmGeometry::SINGLE7
+        } else {
+            crate::playback::TonearmGeometry::LP12
+        };
+        let stylus_radius = layout
+            .as_ref()
+            .and_then(|layout| layout.radius_for_time(position))
+            .unwrap_or(geometry.outer_radius);
+        let arm_angle = geometry.angle_for_radius(stylus_radius);
 
         PlaybackState {
             loaded: self.engine.has_track(),
@@ -373,6 +400,10 @@ impl Session {
                 .map(|layout| layout.bands.clone())
                 .unwrap_or_default(),
             record_radius: layout.map(|layout| layout.record_radius).unwrap_or(151.0),
+            arm_angle,
+            stylus_radius,
+            pivot_distance: geometry.pivot_distance,
+            arm_length: geometry.effective_length,
             track_index,
             track_number: track_span.as_ref().map(|track| track.number).unwrap_or(0),
             track_title: track_span.map(|track| track.title).unwrap_or_default(),

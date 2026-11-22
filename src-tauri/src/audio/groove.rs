@@ -32,6 +32,10 @@ pub struct GrooveBand {
     /// `start` normalised to the record radius (`0.0` centre, `1.0` edge).
     pub start_norm: f64,
     pub end_norm: f64,
+    /// Side time at the outer edge of the band.
+    pub start_time: f64,
+    /// Side time at the inner edge of the band.
+    pub end_time: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +45,25 @@ pub struct GrooveLayout {
 }
 
 impl GrooveLayout {
+    /// Stylus radius (mm) for a side position in seconds.
+    pub fn radius_for_time(&self, seconds: f64) -> Option<f64> {
+        if self.bands.is_empty() {
+            return None;
+        }
+        let time = seconds.max(0.0);
+        for band in &self.bands {
+            let span = band.end_time - band.start_time;
+            if span > 1e-9 && time >= band.start_time && time <= band.end_time {
+                let progress = ((time - band.start_time) / span).clamp(0.0, 1.0);
+                return Some(band.start + (band.end - band.start) * progress);
+            }
+            if time < band.start_time {
+                return Some(band.start);
+            }
+        }
+        self.bands.last().map(|band| band.end)
+    }
+
     pub fn for_side(timeline: &SideTimeline, format: DiscFormat, rpm: Rpm) -> Self {
         let single = format == DiscFormat::Single7 || rpm == Rpm::R45;
         let geometry = if single {
@@ -90,6 +113,7 @@ impl GrooveLayout {
 
         let music_width = (available - gap_sum).max(0.0);
         let mut cursor = outer;
+        let mut time_cursor = 0.0;
         let mut bands = vec![GrooveBand {
             kind: GrooveKind::LeadIn,
             track_index: None,
@@ -97,6 +121,8 @@ impl GrooveLayout {
             end: outer,
             start_norm: 1.0,
             end_norm: outer / record_radius,
+            start_time: 0.0,
+            end_time: 0.0,
         }];
 
         for (index, track) in timeline.tracks.iter().enumerate() {
@@ -109,9 +135,12 @@ impl GrooveLayout {
                     end: cursor - gap,
                     start_norm: cursor / record_radius,
                     end_norm: (cursor - gap) / record_radius,
+                    start_time: time_cursor,
+                    end_time: time_cursor + track.pregap,
                 });
                 cursor -= gap;
             }
+            time_cursor += track.pregap;
 
             let width = if total_duration > 0.0 {
                 music_width * track.duration.max(0.0) / total_duration
@@ -125,8 +154,11 @@ impl GrooveLayout {
                 end: cursor - width,
                 start_norm: cursor / record_radius,
                 end_norm: (cursor - width) / record_radius,
+                start_time: time_cursor,
+                end_time: time_cursor + track.duration,
             });
             cursor -= width;
+            time_cursor += track.duration;
         }
 
         let runout_end = (inner - 8.0).max(label_radius).min(cursor);
@@ -137,6 +169,8 @@ impl GrooveLayout {
             end: runout_end,
             start_norm: cursor / record_radius,
             end_norm: runout_end / record_radius,
+            start_time: time_cursor,
+            end_time: time_cursor,
         });
 
         Self {
@@ -178,6 +212,34 @@ mod tests {
     fn layout(durations: &[f64], pregaps: &[f64]) -> GrooveLayout {
         let timeline = SideTimeline::from_side(&side(durations, pregaps));
         GrooveLayout::for_side(&timeline, DiscFormat::Lp12, Rpm::R33)
+    }
+
+    #[test]
+    fn maps_time_to_radius_monotonically() {
+        let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
+        let mut previous = f64::MAX;
+        for step in 0..=100 {
+            let time = 453.0 * step as f64 / 100.0;
+            let radius = layout.radius_for_time(time).unwrap();
+            assert!(radius <= previous + 1e-9, "radius must shrink over time");
+            previous = radius;
+        }
+        let start = layout.radius_for_time(0.0).unwrap();
+        let end = layout.radius_for_time(453.0).unwrap();
+        assert!((start - 146.0).abs() < 1e-9);
+        assert!(end <= 60.0 + 1e-6);
+    }
+
+    #[test]
+    fn band_times_cover_the_side() {
+        let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
+        let first = layout.bands.first().unwrap();
+        let last = layout.bands.last().unwrap();
+        assert_eq!(first.start_time, 0.0);
+        assert!((last.end_time - 453.0).abs() < 1e-9);
+        for pair in layout.bands.windows(2) {
+            assert!(pair[0].end_time <= pair[1].start_time + 1e-9);
+        }
     }
 
     #[test]
