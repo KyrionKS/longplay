@@ -156,7 +156,7 @@
   }
 
   .vinyl.single {
-    inset: 22.5%;
+    inset: 23%;
   }
 
   .vinyl.single .label {

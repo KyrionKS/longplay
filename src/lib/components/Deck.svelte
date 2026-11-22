@@ -64,7 +64,11 @@
   });
 
   const REFERENCE_MM = 151;
-  const mmToPx = $derived((platterRadius * 0.965) / REFERENCE_MM);
+  // The platter is only the carrier: the record has a 3.5 % inset on each side,
+  // so its radius is 0.93 × the platter radius. All tonearm dimensions scale
+  // against the record, never against the platter.
+  const RECORD_RADIUS_FACTOR = 1 - 2 * 0.035;
+  const mmToPx = $derived((platterRadius * RECORD_RADIUS_FACTOR) / REFERENCE_MM);
   const pivotDistance = $derived(playback?.pivotDistance ?? 211);
   const armLength = $derived(playback?.armLength ?? 230);
   // The pivot sits high up-right of the spindle, like a real deck.
@@ -460,18 +464,18 @@
 
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${phiDeg + 16})`}>
           <rect
-            x={-armLengthPx * 0.055}
-            y={-armLengthPx * 0.024}
-            width={armLengthPx * 0.06}
-            height={armLengthPx * 0.048}
+            x={-armLengthPx * 0.045}
+            y={-armLengthPx * 0.022}
+            width={armLengthPx * 0.055}
+            height={armLengthPx * 0.044}
             rx="3"
             fill="#1c1c1c"
           />
           <rect
-            x={-armLengthPx * 0.048}
-            y={-armLengthPx * 0.018}
-            width={armLengthPx * 0.036}
-            height={armLengthPx * 0.036}
+            x={-armLengthPx * 0.038}
+            y={-armLengthPx * 0.016}
+            width={armLengthPx * 0.03}
+            height={armLengthPx * 0.032}
             rx="2"
             fill="#b5342a"
           />
