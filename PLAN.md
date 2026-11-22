@@ -9,10 +9,11 @@ Arbeitstitel: **Longplay** (Namenskollision mit longplay.app beachten, finaler N
 
 ## 1. Ziel
 
-Die Musikbibliothek liegt als Dateien auf dem Mac. Longplay zeigt sie als Schallplatten
-in einer Holzkiste und spielt sie auf einem Direct-Drive-Plattenspieler ab: Tonarm von Hand
-aufsetzen, am Teller scratchen, 33⅓/45 umschalten, Alben wie echte LPs in Seite A und B
-teilen und wenden. Knistern, Rumpeln und Nadelphysik gehören dazu — subtil, nicht als Effektgerät.
+Die Musikbibliothek liegt als Dateien auf dem Mac oder NAS. Longplay zeigt sie als
+Schallplatten in einer Holzkiste und spielt sie auf einem Direct-Drive-Plattenspieler ab:
+Tonarm von Hand aufsetzen, 33⅓/45 umschalten, Alben wie echte LPs in Seite A und B teilen
+und wenden. Knistern, Rumpeln und Nadelphysik gehören dazu — subtil, nicht als Effektgerät.
+Scratchen ist bewusst kein Feature; im Mittelpunkt steht das Vinyl-Erlebnis.
 
 **Leitplanken**
 
@@ -31,7 +32,7 @@ teilen und wenden. Knistern, Rumpeln und Nadelphysik gehören dazu — subtil, n
 | Bibliothek | Ordner hinzufügen, rekursiv scannen, Alben gruppieren, Cover, Farbpalette, Suche, Sortierung, inkrementeller Rescan |
 | CUE | `.cue` lesen, Single-File- und Multi-File-Alben, Pregaps, Seitenhinweise |
 | Seiten | A/B pro Album (generisch N Seiten), Standard = manuell wenden, Auto-Flip optional |
-| Audio | FLAC/ALAC/AAC/MP3/WAV/AIFF, Varispeed, Scratch vorwärts/rückwärts, Cueing, Pregap-Stille |
+| Audio | FLAC/ALAC/AAC/MP3/WAV/AIFF, Varispeed, Cueing, Pregap-Stille, Song-für-Song-Laden |
 | Vinyl | Crackle, Rumble, Nadel-Fall, Bürste, Wow/Flutter, Innenrillen-Charakter, Übersprechen |
 | Optik | Holzkiste, Sleeves, Plattenspieler, Tonarm, Label, Gatefold, White-Label-Playlists, 7″-Singles |
 | Mac | Menübar-Mini-Player, Media-Keys/Now Playing, Shortcuts, Einstellungen, `.app`/DMG |
@@ -250,12 +251,16 @@ Fortschritt linear in der Zeit, Track-Bänder aus den Dauern.
 - Aufsetzen: Cantilever 1–2 px, zwei Nachschwingungen, ~120 ms.
 - Warp: 0,5–2 Hz, minimale vertikale Bewegung des Arms.
 
-### Scratch
+### Cueing (bewusst kein Scratch)
 
-- Ziehen am Teller: Winkelgeschwindigkeit aus Pointer-Delta.
-- Rate folgt der Hand, Loslassen läuft gedämpft aus.
-- Rückwärts nur innerhalb des Ringpuffers; an der Grenze clampen.
-- Audio während des Cueings stumm, Nadel-Fall-Thump beim Aufsetzen.
+Scratchen ist nicht im Scope. Der Tonarm wird gezogen, um zu cueen:
+
+- Arm anheben, über die Platte bewegen, auf einer Rille absetzen; Audio bleibt bis zum
+  Aufsetzen stumm.
+- Während des Ziehens folgt der Arm dem Zeiger, die Nadel bleibt angehoben
+  (Cantilever-Physik).
+- Aufsetzen: kurzer Nadel-Fall-Thump, dann Wiedergabe ab der Position.
+- Seitenende: Auslaufrille mit Locked-Groove-Thump, Auto-Return in die Ablage.
 
 ## 9. Optik
 
@@ -290,6 +295,25 @@ Pressung), rechts Tracklist mit Punktführung, aktueller Track eingekreist, Blö
 
 White-Label-Testpressung: weißes Label, handgeschriebene Anmutung, Tracklist als Stempel.
 Pausen 0.
+
+### Vinyl-Ästhetik (Vorschlag)
+
+Priorisiert nach Wirkung, nicht nach Aufwand:
+
+1. **Tonarm in der Rille:** Winkel folgt der Wiedergabe, Nadel sitzt sichtbar im Band.
+2. **Material:** Label-Abrieb am Rand, leicht vergilbtes Papier, Ring-Abdruck des
+   Vinyls auf der Hülle, abgestoßene Sleeve-Ecken.
+3. **Tote Rille:** Matrix-Nummer und Presswerks-Kürzel eingeritzt, Staub und feine
+   Haarkratzer deterministisch pro Album.
+4. **Bewegung:** Teller-Anlauf/Auslauf mit Trägheit, 20-ms-Nadel-Absetzen, Warp-Reflex,
+   die mit der Drehung wandert.
+5. **Licht:** ein beweglicher Glanzstreifen, Staub im Lichtkegel, weicher Schatten
+   unter dem Arm.
+6. **Hülle → Teller:** Sleeve hebt sich, Platte gleitet heraus und sinkt auf den Teller.
+7. **Track-Hover:** Zeiger über einem Rillenband zeigt den Tracktitel als geätzte
+   Beschriftung; Klick cueed dorthin.
+8. **Ambiente:** 7″-Single kleiner als 12″, großes Loch, 45-Adapter; Gatefold mit
+   echten Metadaten.
 
 ## 10. macOS
 
@@ -350,14 +374,16 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 ### Phase 3 — Turntable
 
 - [x] Rillen-Layout pro Track, Pausen und Auslaufrille (Canvas, vorgezogen)
-- [ ] Tonarm an das Rillen-Layout koppeln
-- [ ] Teller-Physik, Start/Stop
-- [ ] Tonarm-Ziehen, Cueing, Radius-Mapping, Auto-Return
-- [ ] Scratch vorwärts/rückwärts, Auslauf
-- [ ] 33/45
-- [ ] Seiten-Zustandsmaschine + Flip
+- [ ] Tonarm folgt dem Rillen-Layout (Winkel aus der Side-Position)
+- [ ] Teller-Physik: Anlauf, Auslauf, Start/Stop
+- [ ] Tonarm ziehen und cueen (ohne Scratch), Nadel-Fall
+- [ ] Auto-Return und Locked-Groove am Seitenende
+- [ ] 33/45 (Tonhöhe und Tempo)
+- [ ] Seiten-Zustandsmaschine + Flip-Animation
+- [ ] Ästhetik-Pass (siehe Abschnitt 9)
 
-**Abnahme:** Radius-Mapping exakt, Scratch gefühlt < 20 ms, kein Zipper, Seitenwechsel rund.
+**Abnahme:** Armwinkel und Rillenposition stimmen überein, Cueing sitzt auf dem
+gewählten Track, Seitenwechsel und Flip laufen rund, 60 fps. Kein Scratch.
 
 ### Phase 4 — Optik
 
@@ -385,7 +411,7 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 - **Offline-Audio:** deterministische Renderings, Kennzahlen statt Ohren.
 - **Property:** Rate/Seek-Kombinationen bleiben im gültigen Bereich.
 - **Frontend:** `svelte-check`, Build; später Vitest für Stores.
-- **Manuell (Mac):** Scratch-Gefühl, Klang, 60 fps, Media-Keys, Seitenwechsel.
+- **Manuell (Mac):** Cueing, Klang, 60 fps, Media-Keys, Seitenwechsel, Ästhetik.
 
 Regel: Kein „getestet“ ohne ausgeführten Befehl. Von Agenten geschriebene Tests werden
 per Mutationscheck geprüft.
@@ -394,7 +420,7 @@ per Mutationscheck geprüft.
 
 | Risiko | Gegenmittel |
 |---|---|
-| Scratch-Gefühl nicht messbar | früh prototypisieren, Parameter offenlegen, am Mac beurteilen |
+| Tonarm trifft die Rille nicht exakt | ein gemeinsames Rillen-Layout für Audio und Optik, Tests auf Winkel/Radius |
 | WebView-Performance | Platte vorrendern, Rotation per CSS, Frame-Zeiten messen |
 | Tag-Chaos | Fallbacks, Scan-Fehler sichtbar, später manuelles Editieren |
 | Optik wirkt billig | Texturen früh festlegen, notfalls stilisiert statt halb fotorealistisch |

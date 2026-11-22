@@ -3,9 +3,9 @@
 Ein skeuomorpher Plattenspieler für die eigene Musiksammlung — für macOS, gebaut mit
 Rust und Tauri.
 
-Deine Alben liegen als Dateien auf dem Rechner. Longplay zeigt sie als Schallplatten in
-einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler und lässt dich den Tonarm
-von Hand aufsetzen, am Teller scratchen, zwischen 33⅓ und 45 umschalten und Alben wie
+Deine Alben liegen als Dateien auf dem Rechner oder NAS. Longplay zeigt sie als
+Schallplatten in einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler und
+lässt dich den Tonarm von Hand aufsetzen, zwischen 33⅓ und 45 umschalten und Alben wie
 echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler Nadelphysik.
 
 > **Status:** Phase 2 — Audio und Rillen. Bibliothek scannen, Album auflegen, Start/Stop,
