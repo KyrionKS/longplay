@@ -1,0 +1,61 @@
+:root {
+  --wood-dark: #1b100a;
+  --wood-mid: #3a2316;
+  --wood-light: #6b4226;
+  --wood-highlight: #8a5a35;
+  --brass: #c9a227;
+  --brass-light: #e8cf7a;
+  --brass-dark: #7a5f12;
+  --cream: #efe6cf;
+  --paper: #f4eeda;
+  --ink: #1a1410;
+  --ink-soft: #4a3b2c;
+  --shadow: rgba(0, 0, 0, 0.55);
+
+  --font-display: ui-serif, "Iowan Old Style", "Palatino", Georgia, serif;
+  --font-label: ui-sans-serif, "Helvetica Neue", "Inter", system-ui, sans-serif;
+
+  --crate-width: 40%;
+  --titlebar-height: 34px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--wood-dark);
+  color: var(--cream);
+  font-family: var(--font-label);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: inherit;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--brass-light);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
