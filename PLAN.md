@@ -382,6 +382,7 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 - [x] Seiten-Flip-Animation und 7″-Darstellung
 - [ ] Locked-Groove-Thump am Seitenende
 - [ ] Ästhetik-Pass: Abrieb, Matrix-Ritzung, Staub, Licht, Hüllen-Animation, Gatefold
+- [x] Tonarmhöhe/Drehpunkt, größere Platte, Teller und Platte drehen gemeinsam
 
 **Abnahme:** Armwinkel und Rillenposition stimmen überein, Cueing sitzt auf dem
 gewählten Track, Seitenwechsel und Flip laufen rund, 60 fps. Kein Scratch.

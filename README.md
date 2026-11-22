@@ -46,7 +46,7 @@ npm run tauri dev
 Bedienung: Album anklicken legt es auf, `START/STOP` startet, die Tabs `A`/`B`
 wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
 Auf die Platte ziehen setzt die Nadel an der Stelle ab; beim Überfahren zeigt ein
-kleines Etikett den Track unter dem Zeiger.
+kleines Etikett den Track unter dem Zeiger. `Leertaste` startet und stoppt.
 
 Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
 

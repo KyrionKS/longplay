@@ -82,7 +82,23 @@
         sideIndex = state.sideIndex;
       }
     }, 250);
-    return () => window.clearInterval(timer);
+
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+        return;
+      }
+      if (event.code === "Space") {
+        event.preventDefault();
+        toggle();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("keydown", onKey);
+    };
   });
 
   function cycleSort() {

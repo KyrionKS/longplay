@@ -31,7 +31,7 @@
     !!playback && duration > 0 && !playback.playing && position >= duration - 0.08,
   );
 
-  const REST_PHI = 1.26;
+  const REST_PHI = 1.5;
 
   let stageEl: HTMLDivElement | undefined = $state();
   let platterEl: HTMLDivElement | undefined = $state();
@@ -64,11 +64,11 @@
   });
 
   const REFERENCE_MM = 151;
-  const mmToPx = $derived((platterRadius * 0.94) / REFERENCE_MM);
+  const mmToPx = $derived((platterRadius * 0.965) / REFERENCE_MM);
   const pivotDistance = $derived(playback?.pivotDistance ?? 211);
   const armLength = $derived(playback?.armLength ?? 230);
-  // The pivot sits up-right of the spindle, like a real deck.
-  const PIVOT_ANGLE = -0.34;
+  // The pivot sits high up-right of the spindle, like a real deck.
+  const PIVOT_ANGLE = -0.62;
   const pivotX = $derived(centerX + pivotDistance * mmToPx * Math.cos(PIVOT_ANGLE));
   const pivotY = $derived(centerY + pivotDistance * mmToPx * Math.sin(PIVOT_ANGLE));
   const armLengthPx = $derived(armLength * mmToPx);
@@ -99,6 +99,33 @@
   });
 
   let armPhi = $state(REST_PHI);
+  let platterAngle = $state(0);
+  let platterVelocity = 0;
+
+  $effect(() => {
+    const active = playing || dragging;
+    const target = active ? (Math.PI * 2) / (rpmValue === 45 ? 1.333 : 1.8) : 0;
+    let frame = 0;
+    let last = performance.now();
+
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const tau = target > platterVelocity ? 0.5 : 2.4;
+      platterVelocity +=
+        (target - platterVelocity) * (1 - Math.exp(-dt / tau));
+      untrack(() => {
+        if (platterVelocity > 1e-4 || target > 0) {
+          platterAngle =
+            (platterAngle + platterVelocity * dt) % (Math.PI * 2);
+        }
+      });
+      frame = requestAnimationFrame(loop);
+    };
+
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  });
 
   $effect(() => {
     const target = statePhi;
@@ -218,27 +245,32 @@
         onpointercancel={onPointerUp}
         onpointerleave={onPointerLeave}
       >
-        <div class="rim"></div>
-        <svg class="strobe" viewBox="0 0 400 400" aria-hidden="true">
-          <circle
-            cx="200"
-            cy="200"
-            r="192"
-            fill="none"
-            stroke="rgba(239,230,207,0.24)"
-            stroke-width="3.4"
-            stroke-dasharray="2.2 10"
-          />
-        </svg>
+        <div
+          class="platter-spin"
+          style:transform={`rotate(${platterAngle}rad)`}
+        >
+          <div class="rim"></div>
+          <svg class="strobe" viewBox="0 0 400 400" aria-hidden="true">
+            <circle
+              cx="200"
+              cy="200"
+              r="192"
+              fill="none"
+              stroke="rgba(239,230,207,0.24)"
+              stroke-width="3.4"
+              stroke-dasharray="2.2 10"
+            />
+          </svg>
 
-        {#if album && side}
-          {#key `${album.id}:${side.label}`}
-            <Vinyl {album} {side} {grooves} spinning={playing || dragging} />
-          {/key}
-        {:else}
-          <div class="mat"></div>
-          <div class="spindle"></div>
-        {/if}
+          {#if album && side}
+            {#key `${album.id}:${side.label}`}
+              <Vinyl {album} {side} {grooves} />
+            {/key}
+          {:else}
+            <div class="mat"></div>
+            <div class="spindle"></div>
+          {/if}
+        </div>
       </div>
 
       {#if album && side}
@@ -531,6 +563,13 @@
 
   .platter.dragging {
     cursor: grabbing;
+  }
+
+  .platter-spin {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    will-change: transform;
   }
 
   .strobe {

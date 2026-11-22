@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { untrack } from "svelte";
   import type { Album, GrooveBand, Side } from "$lib/types";
   import { formatDuration } from "$lib/library.svelte";
 
   let {
     album,
     side,
-    spinning = false,
     grooves = [],
-  }: { album: Album; side: Side; spinning?: boolean; grooves?: GrooveBand[] } = $props();
+  }: { album: Album; side: Side; grooves?: GrooveBand[] } = $props();
 
   const sideDuration = $derived(
     side.tracks.reduce((total, track) => total + track.duration + track.pregap, 0),
@@ -18,32 +16,6 @@
   );
   const rpm = $derived(side.rpm === "45" ? "45" : "33⅓");
 
-  let discAngle = $state(0);
-  let velocity = 0;
-
-  $effect(() => {
-    const target = spinning
-      ? (Math.PI * 2) / (side.rpm === "45" ? 1.333 : 1.8)
-      : 0;
-    let frame = 0;
-    let last = performance.now();
-
-    const loop = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      const tau = target > velocity ? 0.5 : 2.4;
-      velocity += (target - velocity) * (1 - Math.exp(-dt / tau));
-      untrack(() => {
-        if (velocity > 1e-4 || target > 0) {
-          discAngle = (discAngle + velocity * dt) % (Math.PI * 2);
-        }
-      });
-      frame = requestAnimationFrame(loop);
-    };
-
-    frame = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(frame);
-  });
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let host: HTMLDivElement | undefined = $state();
@@ -138,11 +110,7 @@
   style:--label={album.palette.label}
   style:--ink={album.palette.dark}
 >
-  <div
-    class="disc-layer"
-    style:transform={`rotate(${discAngle}rad)`}
-    aria-hidden="true"
-  >
+  <div class="disc-layer" aria-hidden="true">
     <div class="grooves"></div>
     <canvas class="grooves-canvas" bind:this={canvas} aria-hidden="true"></canvas>
 
@@ -167,7 +135,7 @@
 <style>
   .vinyl {
     position: absolute;
-    inset: 6%;
+    inset: 3.5%;
     border-radius: 50%;
     background:
       radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.14), transparent 32%),
@@ -188,7 +156,7 @@
   }
 
   .vinyl.single {
-    inset: 24.5%;
+    inset: 23%;
   }
 
   .vinyl.single .label {
