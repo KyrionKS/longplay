@@ -74,6 +74,13 @@
   const armLengthPx = $derived(armLength * mmToPx);
 
   let dragging = $state(false);
+  let cueHold = $state<{
+    phi: number;
+    time: number;
+    x: number;
+    y: number;
+    trackIndex: number | null;
+  } | null>(null);
   let manualPhi = $state(REST_PHI);
   let cueTime = $state(0);
   let cueTrackIndex = $state<number | null>(null);
@@ -92,6 +99,7 @@
 
   const statePhi = $derived.by(() => {
     if (dragging) return manualPhi;
+    if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
     if (atEnd) return REST_PHI;
     if (!playback.playing && playback.position < 0.05) return REST_PHI;
@@ -103,7 +111,7 @@
   let platterVelocity = 0;
 
   $effect(() => {
-    const active = playing || dragging;
+    const active = playing || dragging || !!cueHold;
     const target = active ? (Math.PI * 2) / (rpmValue === 45 ? 1.333 : 1.8) : 0;
     let frame = 0;
     let last = performance.now();
@@ -125,6 +133,21 @@
 
     frame = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(frame);
+  });
+
+  $effect(() => {
+    if (!cueHold) return;
+    if (playback?.loading) return;
+    const timer = setTimeout(() => {
+      cueHold = null;
+    }, 900);
+    return () => clearTimeout(timer);
+  });
+
+  $effect(() => {
+    album?.id;
+    sideIndex;
+    cueHold = null;
   });
 
   $effect(() => {
@@ -215,6 +238,17 @@
 
   function onPointerUp() {
     if (!dragging) return;
+    const sameTrack =
+      cueTrackIndex !== null && cueTrackIndex === playback?.trackIndex;
+    if (!sameTrack) {
+      cueHold = {
+        phi: manualPhi,
+        time: cueTime,
+        x: cueX,
+        y: cueY,
+        trackIndex: cueTrackIndex,
+      };
+    }
     dragging = false;
     hoverTrackIndex = null;
     void cuePlayback(cueTime);
@@ -292,7 +326,13 @@
             <span class="rpm-note">{rpmLabel} RPM</span>
           </div>
           <span class="time">
-            {#if loading}
+            {#if cueHold}
+              {formatClock(cueHold.time)} / {formatClock(duration)}
+              {#if cueHold.trackIndex !== null && side?.tracks[cueHold.trackIndex]}
+                · {side.tracks[cueHold.trackIndex].number}. {side.tracks[cueHold.trackIndex].title}
+              {/if}
+              · lädt …
+            {:else if loading}
               Platte wird aufgelegt …
             {:else}
               {formatClock(position)} / {formatClock(duration)}
@@ -307,10 +347,21 @@
       {/if}
     </div>
 
-    {#if dragging && cueTrack}
-      <div class="cue-badge" style:left={`${cueX}px`} style:top={`${cueY}px`}>
-        <span class="cue-time">{formatClock(cueTime)}</span>
-        <strong>{cueTrack.number}. {cueTrack.title}</strong>
+    {#if dragging || cueHold}
+      {@const badgeTrack =
+        (dragging ? cueTrackIndex : cueHold?.trackIndex ?? null) !== null
+          ? side?.tracks[
+              (dragging ? cueTrackIndex : cueHold?.trackIndex) as number
+            ] ?? null
+          : null}
+      <div
+        class="cue-badge"
+        style:left={`${dragging ? cueX : (cueHold?.x ?? 0)}px`}
+        style:top={`${dragging ? cueY : (cueHold?.y ?? 0)}px`}
+      >
+        <span class="cue-time">{formatClock(dragging ? cueTime : (cueHold?.time ?? 0))}</span>
+        {#if badgeTrack}<strong>{badgeTrack.number}. {badgeTrack.title}</strong>{/if}
+        {#if !dragging}<span class="cue-loading">lädt …</span>{/if}
       </div>
     {:else if hoverTrack && !dragging}
       <div class="hover-badge" style:left={`${hoverX}px`} style:top={`${hoverY}px`}>
@@ -741,6 +792,13 @@
     margin-right: 8px;
     color: var(--brass-light);
     font-variant-numeric: tabular-nums;
+  }
+
+  .cue-loading {
+    margin-left: 8px;
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    color: rgba(232, 207, 122, 0.7);
   }
 
   .controls {

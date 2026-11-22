@@ -123,6 +123,9 @@ impl Session {
 
     fn tick(self: &Arc<Self>) {
         self.engine.drain_retired();
+        if self.loading.load(Ordering::Relaxed) {
+            return;
+        }
         if !self.engine.has_track() || self.engine.has_next() {
             return;
         }
@@ -302,17 +305,28 @@ impl Session {
             return;
         };
         let was_playing = play_after || self.engine.is_playing();
-        let token = self.token.fetch_add(1, Ordering::SeqCst) + 1;
-        self.loading.store(true, Ordering::Relaxed);
-        self.engine.pause();
-        self.engine.clear();
-
-        let session = Arc::clone(self);
         let local = if target.in_gap {
             target.offset
         } else {
             span.pregap + target.offset
         };
+
+        // The next track is usually already decoded; a cue into it is instant
+        // even when the files live on a NAS.
+        if let Some(track) = self.engine.take_next(target.index) {
+            self.engine.load_track(track, local);
+            if was_playing {
+                self.engine.play();
+            }
+            return;
+        }
+
+        let token = self.token.fetch_add(1, Ordering::SeqCst) + 1;
+        self.loading.store(true, Ordering::Relaxed);
+        self.engine.pause();
+        self.engine.clear_next();
+
+        let session = Arc::clone(self);
         std::thread::spawn(move || {
             let (track, issues) = decode::build_track(&side, &timeline, target.index, ENGINE_RATE);
             if session.token.load(Ordering::SeqCst) != token {
@@ -421,6 +435,93 @@ impl Session {
 mod tests {
     use super::*;
     use crate::audio::decode::TrackAudio;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn cue_into_the_prefetched_next_track_is_immediate() {
+        use crate::library::model::{Rpm, Side, Track};
+        use std::fs;
+        use std::path::PathBuf;
+        use std::time::{Duration, Instant};
+
+        fn write_wav(path: &std::path::Path, seconds: f64) {
+            let rate = 8_000u32;
+            let frames = (seconds * f64::from(rate)) as u32;
+            let data_len = frames * 4;
+            let mut out = Vec::new();
+            out.extend_from_slice(b"RIFF");
+            out.extend_from_slice(&(36 + data_len).to_le_bytes());
+            out.extend_from_slice(b"WAVEfmt ");
+            out.extend_from_slice(&16u32.to_le_bytes());
+            out.extend_from_slice(&1u16.to_le_bytes());
+            out.extend_from_slice(&2u16.to_le_bytes());
+            out.extend_from_slice(&rate.to_le_bytes());
+            out.extend_from_slice(&(rate * 4).to_le_bytes());
+            out.extend_from_slice(&4u16.to_le_bytes());
+            out.extend_from_slice(&16u16.to_le_bytes());
+            out.extend_from_slice(b"data");
+            out.extend_from_slice(&data_len.to_le_bytes());
+            out.resize(out.len() + data_len as usize, 0);
+            fs::write(path, out).unwrap();
+        }
+
+        fn wait_until(mut condition: impl FnMut() -> bool) {
+            let deadline = Instant::now() + Duration::from_secs(4);
+            while Instant::now() < deadline {
+                if condition() {
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            panic!("condition not reached in time");
+        }
+
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir: PathBuf =
+            std::env::temp_dir().join(format!("longplay-cue-{}-{stamp}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("tone.wav");
+        write_wav(&path, 2.0);
+        let track = |index: usize| Track {
+            id: format!("t{index}"),
+            number: index as u32 + 1,
+            title: format!("Track {}", index + 1),
+            artist: "Test".into(),
+            duration: 2.0,
+            pregap: 0.0,
+            path: path.to_string_lossy().into_owned(),
+            offset: 0.0,
+            side: "A".into(),
+        };
+        let side = Side {
+            label: "A".into(),
+            rpm: Rpm::R33,
+            matrix: None,
+            tracks: vec![track(0), track(1)],
+        };
+
+        let session = Arc::new(Session::new());
+        session.start_output();
+        session.load("album", 0, &side, DiscFormat::Lp12, true);
+        wait_until(|| session.state().loaded);
+
+        // Give the conductor time to prefetch the next track.
+        std::thread::sleep(Duration::from_millis(400));
+        session.cue(2.1);
+
+        wait_until(|| {
+            let state = session.state();
+            state.track_index == 1 && state.playing
+        });
+        let state = session.state();
+        assert!(!state.loading, "prefetched cue must not block");
+        assert!(state.position >= 2.05, "position {}", state.position);
+
+        fs::remove_dir_all(&dir).ok();
+    }
 
     #[test]
     fn loads_state_before_any_track() {

@@ -192,6 +192,9 @@ Datei → symphonia (Thread) → Track-Puffer 48 kHz (inkl. Pregap) → Resample
 - Seek innerhalb des Tracks ist sample-genau; ein Seek in einen anderen Track lädt
   diesen kurz nach (Status `loading`).
 - Seitenende: letzter Track endet → Nadel hebt ab → Auto-Return → `side-ended`.
+- **Cueing auf einen anderen Track:** Der alte Track bleibt geladen und pausiert, der Arm
+  bleibt am Cue-Punkt, die Platte dreht weiter; ein Badge zeigt „lädt …“, bis der neue
+  Track vom NAS da ist. Der **vorgeladene nächste** Track wird sofort übernommen.
 
 ### Parameter (Defaults)
 
@@ -377,6 +380,7 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 - [x] Tonarm folgt dem Rillen-Layout (Winkel aus der Side-Position)
 - [x] Teller-Physik: Anlauf, Auslauf, Start/Stop
 - [x] Tonarm ziehen und cueen (ohne Scratch), Nadel-Fall
+- [x] Cueing hält den Arm während des Nachladens; nächster Track instant
 - [x] Auto-Return am Seitenende
 - [x] 33/45 (Tonhöhe und Tempo)
 - [x] Seiten-Flip-Animation und 7″-Darstellung

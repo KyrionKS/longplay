@@ -114,6 +114,16 @@ impl Engine {
         self.next.load().is_some()
     }
 
+    /// Takes the prefetched track if it is the requested one.
+    pub fn take_next(&self, index: usize) -> Option<Arc<TrackAudio>> {
+        let next = self.next.load_full()?;
+        if next.track_index != index {
+            return None;
+        }
+        self.next.store(None);
+        Some(next)
+    }
+
     pub fn has_track(&self) -> bool {
         self.current.load().is_some()
     }
@@ -646,6 +656,19 @@ mod tests {
         let mut out = vec![1.0; 480 * 2 + 1];
         engine.process_device(&mut out, 2, 48_000, &mut dsp, &mut scratch);
         assert_eq!(out[out.len() - 1], 0.0);
+    }
+
+    #[test]
+    fn takes_only_the_matching_prefetched_track() {
+        let engine = Engine::new();
+        engine.load_track(track_at(0, 0.0, 0.2, 440.0, 0.5), 0.0);
+        engine.queue_next(track_at(1, 0.2, 0.2, 660.0, 0.5));
+        assert!(engine.take_next(2).is_none());
+        assert!(engine.has_next());
+        let taken = engine.take_next(1).expect("prefetched track");
+        assert_eq!(taken.track_index, 1);
+        assert!(!engine.has_next());
+        assert!(engine.take_next(1).is_none());
     }
 
     #[test]
