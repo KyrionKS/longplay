@@ -72,7 +72,7 @@ impl TonearmGeometry {
         {
             return Err(GeometryError::NonPositiveDimension);
         }
-        if !self.inner_radius.is_finite() || !(self.inner_radius < self.outer_radius) {
+        if !self.inner_radius.is_finite() || self.inner_radius >= self.outer_radius {
             return Err(GeometryError::InvalidRadiusRange);
         }
         for radius in [self.inner_radius, self.outer_radius] {

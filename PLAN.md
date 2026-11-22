@@ -3,6 +3,8 @@
 Ein skeuomorpher Plattenspieler für die eigene Musiksammlung auf macOS.
 Arbeitstitel: **Longplay** (Namenskollision mit longplay.app beachten, finaler Name vor Phase 5).
 
+**Status 2026-11-22:** Phase 0 und Phase 1 umgesetzt. Nächster Schritt: Phase 2 (Audio).
+
 ---
 
 ## 1. Ziel
@@ -298,26 +300,27 @@ Pausen 0.
 ### Phase 0 — Skelett (erledigt, wenn alles unten grün ist)
 
 - [x] Tauri 2 + SvelteKit + TypeScript scaffold
-- [ ] Fensterkonfiguration (1280×900, min. 1100×760, Overlay-Titlebar, dunkel)
-- [ ] Theme-Tokens, Holzhintergrund, leere Kiste, deutsche Texte
-- [ ] Rust-Modulskelett mit Tonarm-Geometrie + Tests
-- [ ] `cargo test`, `npm run check`, `npm run build`
-- [ ] README, PLAN.md, Git, öffentliches Repo
+- [x] Fensterkonfiguration (1280×900, min. 1100×760, Overlay-Titlebar, dunkel)
+- [x] Theme-Tokens, Holzhintergrund, Kiste, deutsche Texte
+- [x] Rust-Modulskelett mit Tonarm-Geometrie + Tests
+- [x] `cargo test`, `npm run check`, `npm run build`
+- [x] README, PLAN.md, Git, öffentliches Repo
 
-**Abnahme:** App startet (macOS/Linux), zeigt die leere Kiste, Tests grün.
+**Abnahme:** App startet (Linux verifiziert, macOS offen), zeigt die Kiste, Tests grün.
 
 ### Phase 1 — Bibliothek
 
-- [ ] `cue.rs` + Tests (Single-File, Multi-File, Encoding, Fehlerfälle)
-- [ ] `metadata.rs`, `scanner.rs`, Gruppierung + Tests
-- [ ] SQLite-Schema, inkrementeller Rescan
-- [ ] Cover-Cache, Palette
-- [ ] Seiten-Erkennung + Override
-- [ ] Crate-Grid mit echten Daten, Suche, Sortierung
-- [ ] Scan-Fortschritt als Event
+- [x] `cue.rs` + 21 Tests (Single-File, Multi-File, Encoding, Fehlerfälle)
+- [x] `metadata.rs`, `scanner.rs`, Gruppierung + Tests
+- [x] SQLite-Schema, voller Rescan (inkrementell über `mtime` offen)
+- [x] Cover-Cache (512 px JPEG), Palette
+- [x] Seiten-Erkennung (CUE, Disc, `A1`-Präfix, Heuristik)
+- [ ] Manuelles Seiten-Override im UI (Phase 3)
+- [x] Crate-Grid mit echten Daten, Suche, Sortierung, Seiten
+- [x] Scan-Status im UI; Fortschritt pro Datei offen
 
-**Abnahme:** 50 Alben < 5 s (kalt) / < 300 ms (warm), korrekte Cover und Seiten,
-keine Panik bei kaputten Tags.
+**Abnahme:** Funktional erfüllt (3-Alben-Fixture, End-to-End-Test). Die 50-Alben-
+Messung auf einer echten Bibliothek steht noch aus; kaputte Tags landen als Scan-Issue.
 
 ### Phase 2 — Audio
 

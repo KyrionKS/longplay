@@ -8,8 +8,10 @@ einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler und lässt dich 
 von Hand aufsetzen, am Teller scratchen, zwischen 33⅓ und 45 umschalten und Alben wie
 echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler Nadelphysik.
 
-> **Status:** Phase 0 — Skelett. Die Oberfläche zeigt die leere Kiste und den
-> Plattenspieler, Bibliothek und Audio folgen.
+> **Status:** Phase 1 — Bibliothek. Ordner scannen, Alben mit Covern und Farbpalette
+> in der Kiste, Seite A/B, Auswahl landet auf dem Teller. Audio folgt in Phase 2.
+
+![Longplay mit geladenem Album](docs/phase1.png)
 
 ## Prinzipien
 
@@ -25,6 +27,12 @@ Voraussetzungen: Rust (stable), Node 22+, auf macOS Xcode Command Line Tools.
 ```bash
 npm install
 npm run tauri dev
+```
+
+Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
+
+```bash
+LONGPLAY_SCAN_DIR=/pfad/zur/musik npm run tauri dev
 ```
 
 Auf Linux zusätzlich:
