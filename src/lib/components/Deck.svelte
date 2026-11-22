@@ -7,6 +7,7 @@
   <div class="stage">
     <div class="platter-wrap">
       <div class="platter">
+        <div class="rim"></div>
         <svg class="strobe" viewBox="0 0 400 400" aria-hidden="true">
           <circle
             cx="200"
@@ -50,29 +51,42 @@
       </defs>
 
       <g filter="url(#armShadow)">
+        <!-- Grundplatte -->
+        <ellipse cx="214" cy="104" rx="46" ry="40" fill="url(#base)" opacity="0.95" />
+
         <!-- Gegengewicht -->
-        <rect x="150" y="18" width="34" height="58" rx="14" fill="url(#weight)" />
-        <rect x="150" y="18" width="34" height="58" rx="14" fill="none" stroke="rgba(0,0,0,0.5)" />
+        <g transform="rotate(-14 196 62)">
+          <rect x="180" y="26" width="30" height="62" rx="13" fill="url(#weight)" />
+          <rect
+            x="180"
+            y="26"
+            width="30"
+            height="62"
+            rx="13"
+            fill="none"
+            stroke="rgba(0,0,0,0.45)"
+          />
+        </g>
 
         <!-- Armrohr -->
-        <path d="M216 72 L248 338" stroke="#181818" stroke-width="11" stroke-linecap="round" />
-        <path d="M216 72 L248 338" stroke="url(#chrome)" stroke-width="7" stroke-linecap="round" />
+        <path d="M214 96 L242 330" stroke="#0f0f0f" stroke-width="9" stroke-linecap="round" />
+        <path d="M214 96 L242 330" stroke="url(#chrome)" stroke-width="5.5" stroke-linecap="round" />
 
         <!-- Pivot -->
-        <circle cx="216" cy="72" r="28" fill="url(#base)" />
-        <circle cx="216" cy="72" r="28" fill="none" stroke="rgba(255,255,255,0.18)" />
-        <circle cx="216" cy="72" r="9" fill="#1c1c1c" />
-        <circle cx="213" cy="68" r="3" fill="rgba(255,255,255,0.55)" />
+        <circle cx="214" cy="98" r="24" fill="url(#base)" />
+        <circle cx="214" cy="98" r="13" fill="#232323" stroke="rgba(255,255,255,0.25)" />
+        <circle cx="214" cy="98" r="4" fill="#0d0d0d" />
+        <circle cx="210" cy="94" r="2" fill="rgba(255,255,255,0.6)" />
 
         <!-- Headshell + System -->
-        <g transform="rotate(6 248 338)">
-          <rect x="233" y="328" width="30" height="44" rx="3" fill="#2a2a2a" />
-          <rect x="236" y="331" width="24" height="30" rx="2" fill="#c0392b" />
-          <rect x="240" y="361" width="16" height="10" rx="1" fill="#8f8f8f" />
+        <g transform="rotate(4 242 330)">
+          <rect x="232" y="318" width="20" height="42" rx="2.5" fill="#1c1c1c" />
+          <rect x="235" y="321" width="14" height="26" rx="1.5" fill="#b5342a" />
+          <rect x="237" y="349" width="10" height="9" rx="1" fill="#9a9a9a" />
         </g>
 
         <!-- Armablage -->
-        <path d="M268 292 l20 -14 l10 14 l-20 14 z" fill="#2b2b2b" stroke="rgba(255,255,255,0.12)" />
+        <path d="M258 286 l16 -10 l8 12 l-16 10 z" fill="#2b2b2b" stroke="rgba(255,255,255,0.14)" />
       </g>
     </svg>
   </div>
@@ -103,9 +117,20 @@
     display: flex;
     flex-direction: column;
     background:
-      linear-gradient(180deg, rgba(255, 210, 160, 0.05), transparent 18%),
-      radial-gradient(80% 60% at 70% 30%, rgba(255, 200, 140, 0.05), transparent 70%),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.5), transparent 6%);
+      radial-gradient(70% 52% at 52% 16%, rgba(255, 210, 155, 0.11), transparent 70%),
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.12) 0 1px,
+        rgba(255, 255, 255, 0.012) 1px 3px,
+        transparent 3px 7px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        rgba(255, 190, 120, 0.035) 0 1px,
+        transparent 1px 23px
+      ),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.5), transparent 6%),
+      linear-gradient(180deg, #4a2d1c, #301b10 65%, #24140c);
     border-left: 1px solid rgba(0, 0, 0, 0.55);
     box-shadow: -14px 0 30px rgba(0, 0, 0, 0.28) inset;
   }
@@ -172,18 +197,39 @@
     height: 100%;
   }
 
+  .rim {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 210deg,
+      #585858,
+      #c9c9c9 12%,
+      #6a6a6a 26%,
+      #ededed 40%,
+      #5f5f5f 54%,
+      #b5b5b5 68%,
+      #565656 82%,
+      #d6d6d6 92%,
+      #585858
+    );
+    -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 95.2%, #000 95.6%);
+    mask: radial-gradient(circle at 50% 50%, transparent 0 95.2%, #000 95.6%);
+    opacity: 0.55;
+  }
+
   .mat {
     position: absolute;
-    inset: 4.5%;
+    inset: 6%;
     border-radius: 50%;
     background:
-      radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.045), transparent 55%),
+      radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.055), transparent 55%),
       repeating-radial-gradient(
         circle at 50% 50%,
         rgba(255, 255, 255, 0.018) 0 1px,
         transparent 1px 4px
       ),
-      #1e1e1e;
+      #222;
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.6) inset,
       0 0 40px rgba(0, 0, 0, 0.55) inset;
@@ -213,9 +259,9 @@
 
   .arm {
     position: absolute;
-    right: -2%;
-    top: 2%;
-    height: 96%;
+    right: 1%;
+    top: 3%;
+    height: 92%;
     width: auto;
     overflow: visible;
     pointer-events: none;

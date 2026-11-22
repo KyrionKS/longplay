@@ -387,7 +387,7 @@ per Mutationscheck geprüft.
 ```bash
 # Linux
 npm install
-npm run tauri dev          # braucht WebKitGTK, siehe README
+npm run tauri dev          # Dev-Port 1430; Velox/Paceboard belegen 1420
 cargo test --manifest-path src-tauri/Cargo.toml
 npm run check
 npm run build

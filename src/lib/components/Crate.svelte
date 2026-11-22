@@ -55,7 +55,12 @@
     flex-direction: column;
     background:
       linear-gradient(90deg, rgba(0, 0, 0, 0.42), transparent 9%, transparent 91%, rgba(0, 0, 0, 0.38)),
-      linear-gradient(180deg, rgba(0, 0, 0, 0.34), transparent 10%, transparent 90%, rgba(0, 0, 0, 0.42));
+      repeating-linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.20) 0 1px,
+        transparent 1px 154px
+      ),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 8%, transparent 92%, rgba(0, 0, 0, 0.34));
   }
 
   .head {

@@ -17,17 +17,17 @@
     background-image:
       radial-gradient(120% 70% at 42% -8%, rgba(255, 214, 160, 0.14), transparent 58%),
       repeating-linear-gradient(
-        91deg,
-        rgba(0, 0, 0, 0.16) 0 2px,
-        rgba(255, 255, 255, 0.012) 2px 4px,
-        transparent 4px 9px
+        0deg,
+        rgba(0, 0, 0, 0.11) 0 1px,
+        rgba(255, 255, 255, 0.01) 1px 3px,
+        transparent 3px 7px
       ),
       repeating-linear-gradient(
-        89deg,
-        rgba(255, 190, 120, 0.035) 0 1px,
-        transparent 1px 13px
+        0deg,
+        rgba(255, 190, 120, 0.03) 0 1px,
+        transparent 1px 21px
       ),
-      linear-gradient(178deg, #43291a 0%, #33200f 46%, #24140c 100%);
+      linear-gradient(178deg, #462b1a 0%, #33200f 46%, #24140c 100%);
     background-blend-mode: normal, multiply, overlay, normal;
   }
 
