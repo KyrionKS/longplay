@@ -316,12 +316,19 @@ fn build_from_cue(cue_path: &Path, covers: &Path) -> Result<CueAlbum, String> {
         };
 
         let file_duration = durations.get(file_index).copied().unwrap_or(0.0);
+        // The previous track ends where the next track's pregap starts
+        // (INDEX 00), not at its INDEX 01. Using INDEX 01 would count the
+        // pregap twice and shift every following groove.
         let end = sheet
             .tracks
             .iter()
             .skip(index + 1)
             .filter(|next| next.file_index == Some(file_index))
-            .find_map(|next| next.start().filter(|next_start| *next_start > start))
+            .find_map(|next| {
+                next.index00
+                    .or_else(|| next.start())
+                    .filter(|boundary| *boundary > start)
+            })
             .unwrap_or(file_duration);
         let duration = (end - start).max(0.1);
 
@@ -802,6 +809,14 @@ mod scan_tests {
         assert_eq!(cue_tracks[0].title, "One");
         assert!((cue_tracks[1].pregap - 1.0).abs() < 1e-6);
         assert!((cue_tracks[1].offset - 5.0).abs() < 1e-6);
+        assert!((cue_tracks[0].duration - 4.0).abs() < 0.2, "first CUE track must end at INDEX 00");
+        let cue_total: f64 = cue_album
+            .sides
+            .iter()
+            .flat_map(|side| &side.tracks)
+            .map(|track| track.duration + track.pregap)
+            .sum();
+        assert!((cue_total - 10.0).abs() < 0.2, "CUE side must not exceed the file length");
 
         let ids: Vec<_> = albums.iter().map(|album| album.id.clone()).collect();
         scan(std::slice::from_ref(&root), &mut db, &covers).unwrap();

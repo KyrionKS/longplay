@@ -618,32 +618,32 @@
           />
           <!-- headshell body with lightening holes -->
           <rect
-            x={-armLengthPx * 0.07}
-            y={-armLengthPx * 0.028}
-            width={armLengthPx * 0.14}
-            height={armLengthPx * 0.056}
+            x={-armLengthPx * 0.08}
+            y={-armLengthPx * 0.031}
+            width={armLengthPx * 0.16}
+            height={armLengthPx * 0.062}
             rx="4"
             fill="#161616"
             stroke="rgba(255,255,255,0.14)"
           />
-          <ellipse cx={-armLengthPx * 0.052} cy="0" rx={armLengthPx * 0.011} ry={armLengthPx * 0.0075} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <ellipse cx="0" cy="0" rx={armLengthPx * 0.011} ry={armLengthPx * 0.0075} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <ellipse cx={armLengthPx * 0.052} cy="0" rx={armLengthPx * 0.011} ry={armLengthPx * 0.0075} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx={-armLengthPx * 0.06} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx="0" cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx={armLengthPx * 0.06} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
           <!-- gold cartridge, stylus centred -->
           <rect
-            x={-armLengthPx * 0.021}
-            y={-armLengthPx * 0.018}
-            width={armLengthPx * 0.042}
-            height={armLengthPx * 0.036}
+            x={-armLengthPx * 0.024}
+            y={-armLengthPx * 0.02}
+            width={armLengthPx * 0.048}
+            height={armLengthPx * 0.04}
             rx="2"
             fill="#c8a24a"
             stroke="rgba(0,0,0,0.45)"
           />
           <rect
-            x={-armLengthPx * 0.012}
-            y={-armLengthPx * 0.008}
-            width={armLengthPx * 0.024}
-            height={armLengthPx * 0.016}
+            x={-armLengthPx * 0.014}
+            y={-armLengthPx * 0.009}
+            width={armLengthPx * 0.028}
+            height={armLengthPx * 0.018}
             fill="#1a1a1a"
           />
           <circle r={Math.max(3.4, armLengthPx * 0.013)} fill="rgba(0,0,0,0.35)" />
