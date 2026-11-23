@@ -67,6 +67,7 @@
             </div>
           {/if}
           <span class="sleeve-edge" aria-hidden="true"></span>
+          <span class="front-wear" aria-hidden="true"></span>
         </div>
 
         <div class="face back">
@@ -207,6 +208,20 @@
     pointer-events: none;
   }
 
+  .front-wear {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 55% at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.22) 63%, transparent 72%),
+      radial-gradient(circle at 0 0, rgba(255, 248, 230, 0.5), transparent 9%),
+      radial-gradient(circle at 100% 0, rgba(255, 248, 230, 0.35), transparent 8%),
+      radial-gradient(circle at 0 100%, rgba(255, 248, 230, 0.32), transparent 8%),
+      radial-gradient(circle at 100% 100%, rgba(255, 248, 230, 0.42), transparent 9%);
+    mix-blend-mode: overlay;
+    opacity: 0.9;
+  }
+
   .cover-fallback {
     width: 100%;
     height: 100%;
@@ -236,6 +251,7 @@
   .back {
     transform: rotateY(180deg);
     color: #1a1410;
+    position: relative;
     padding: 5.6% 6%;
     display: flex;
     flex-direction: column;
@@ -243,6 +259,17 @@
     background:
       radial-gradient(90% 80% at 70% 8%, rgba(255, 255, 255, 0.4), transparent 62%),
       linear-gradient(180deg, #efe6cf, #e2d6b8);
+  }
+
+  .back::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.6'/></svg>");
+    background-size: 140px 140px;
   }
 
   .back-head h2 {

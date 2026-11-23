@@ -56,6 +56,10 @@ Track springt sofort. `Leertaste` startet und stoppt.
 Klick auf die Hülle oder `Leertaste` dreht sie um und zeigt die generierte Rückseite
 mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
 
+**Material:** Papierkanten und Ringwear an den Hüllen, Abrieb und Pressring am Label,
+Staub und feine Kratzer auf der Platte, ein wandernder Warp-Glanz und ein warmer
+Lichtkegel über der Kiste. Alles prozedural, keine zusätzlichen Bilddateien.
+
 Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
 
 ```bash

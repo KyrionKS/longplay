@@ -400,11 +400,15 @@ Der Interaktionskern ist erreicht; die Material- und Lichtpolitur folgt im Ästh
 
 ### Phase 4 — Optik
 
-- [ ] Texturen (Holz, Metall, Papier), Licht, Vignette
-- [ ] Platten-Renderer, Label, Glitzer, Kratzer
-- [ ] Tonarm, Knöpfe, Bürste
-- [ ] Gatefold, Playlists, Singles
-- [ ] Animationen, Reduced Motion
+- [x] Material: Papierkante, Ringwear, Ecken, Rücken, Papierkorn
+- [x] Label: Abrieb, Pressring, Spindel-Abrieb, 45-Adapter
+- [x] Platte: Staub, Haarkratzer, Warp-Glanz, deterministisch pro Album
+- [x] Lichtkegel über der Kiste, Vignette
+- [x] Tonarm, Knöpfe, Bürste
+- [x] Hülle (großes Cover, wendbar, generierte Rückseite), Singles
+- [ ] Playlists als White-Label, Liner-Notizen
+- [ ] Echte Holz-/Metall-Texturen als Bitmaps (aktuell prozedural)
+- [ ] Hüllen-Animation, vollständiges Reduced Motion
 
 **Abnahme:** Vergleich mit Referenz-Screenshots, 60 fps (Frame-Zeiten gemessen).
 

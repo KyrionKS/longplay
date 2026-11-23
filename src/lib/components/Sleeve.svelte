@@ -17,6 +17,7 @@
   style:--label={album.palette.label}
 >
   <span class="disc" aria-hidden="true"></span>
+  <span class="paper-edge" aria-hidden="true"></span>
 
   <span class="art">
     {#if cover}
@@ -29,6 +30,9 @@
     {/if}
   </span>
 
+  <span class="wear" aria-hidden="true"></span>
+  <span class="spine" aria-hidden="true"></span>
+  <span class="grain" aria-hidden="true"></span>
   <span class="shine" aria-hidden="true"></span>
   <span class="caption">{album.title}</span>
 </button>
@@ -76,10 +80,20 @@
       inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   }
 
+  .paper-edge {
+    position: absolute;
+    inset: 1% -1.6% -1.6% 1%;
+    border-radius: 1px;
+    background: linear-gradient(160deg, #efe6cf, #cbbc98);
+    box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.35);
+    z-index: 0;
+  }
+
   .art {
     position: absolute;
     inset: 0;
     overflow: hidden;
+    z-index: 1;
     background: #1c120a;
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.65),
@@ -119,9 +133,55 @@
     opacity: 0.8;
   }
 
+  .wear {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 55% at 50% 50%, transparent 58%, rgba(0, 0, 0, 0.27) 63%, transparent 72%),
+      radial-gradient(45% 40% at 50% 50%, transparent 42%, rgba(255, 255, 255, 0.12) 47%, transparent 56%),
+      radial-gradient(circle at 0 0, rgba(255, 248, 230, 0.55), transparent 13%),
+      radial-gradient(circle at 100% 0, rgba(255, 248, 230, 0.35), transparent 11%),
+      radial-gradient(circle at 0 100%, rgba(255, 248, 230, 0.3), transparent 10%),
+      radial-gradient(circle at 100% 100%, rgba(255, 248, 230, 0.42), transparent 12%),
+      radial-gradient(circle at 50% 50%, transparent 46%, rgba(255, 255, 255, 0.05) 49%, transparent 53%);
+    mix-blend-mode: overlay;
+    opacity: 0.85;
+  }
+
+  .spine {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4%;
+    z-index: 2;
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.38),
+      rgba(255, 255, 255, 0.05) 42%,
+      transparent 100%
+    );
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+  }
+
+  .grain {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0.1;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.55'/></svg>");
+    background-size: 120px 120px;
+  }
+
   .shine {
     position: absolute;
     inset: 0;
+    z-index: 4;
     pointer-events: none;
     background: linear-gradient(
       118deg,
@@ -137,6 +197,7 @@
     left: 0;
     right: 0;
     bottom: 0;
+    z-index: 5;
     padding: 22px 8px 7px;
     font-size: 9px;
     letter-spacing: 0.1em;

@@ -34,15 +34,38 @@
 
   $effect(() => {
     if (!canvas || size <= 0) return;
-    const key = `${size}|${grooves.length}|${grooves
+    const seed = `${album.id}:${side.label}`;
+    const key = `${size}|${seed}|${grooves.length}|${grooves
       .map((band) => `${band.startNorm.toFixed(5)}:${band.endNorm.toFixed(5)}`)
       .join(",")}`;
     if (key === lastKey) return;
     lastKey = key;
-    drawGrooves(canvas, size, grooves);
+    drawGrooves(canvas, size, grooves, seed);
   });
 
-  function drawGrooves(target: HTMLCanvasElement, width: number, bands: GrooveBand[]) {
+  function hashSeed(text: string): number {
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function makeRandom(seed: number) {
+    let state = seed || 1;
+    return () => {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      return state / 4294967296;
+    };
+  }
+
+  function drawGrooves(
+    target: HTMLCanvasElement,
+    width: number,
+    bands: GrooveBand[],
+    seed: string,
+  ) {
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     const pixels = Math.max(1, Math.round(width * dpr));
     if (target.width !== pixels || target.height !== pixels) {
@@ -100,6 +123,32 @@
         }
       }
     }
+
+    // Dust and the odd hairline scratch, deterministic per album and side.
+    const random = makeRandom(hashSeed(seed));
+    for (let index = 0; index < 62; index += 1) {
+      const angle = random() * tau;
+      const radius = (0.36 + random() * 0.62) * center;
+      const x = center + Math.cos(angle) * radius;
+      const y = center + Math.sin(angle) * radius;
+      context.beginPath();
+      context.arc(x, y, 0.5 + random() * 1.4, 0, tau);
+      context.fillStyle =
+        random() > 0.5 ? "rgba(255,255,255,0.16)" : "rgba(0,0,0,0.2)";
+      context.fill();
+    }
+
+    for (let index = 0; index < 3; index += 1) {
+      const start = random() * tau;
+      const radius = (0.45 + random() * 0.45) * center;
+      const length = 0.15 + random() * 0.5;
+      context.beginPath();
+      context.arc(center, center, radius, start, start + length);
+      context.strokeStyle =
+        index === 0 ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.055)";
+      context.lineWidth = 0.5 + random() * 0.6;
+      context.stroke();
+    }
   }
 </script>
 
@@ -114,9 +163,11 @@
 >
   <div class="disc-layer" aria-hidden="true">
     <div class="grooves"></div>
+    <div class="warp" aria-hidden="true"></div>
     <canvas class="grooves-canvas" bind:this={canvas} aria-hidden="true"></canvas>
 
     <div class="label">
+      <div class="label-wear" aria-hidden="true"></div>
       <div class="top">
         <span class="cat">{side.matrix ?? "LONGPLAY"}</span>
         <span class="title">{album.title}</span>
@@ -183,6 +234,17 @@
     inset: 0;
     border-radius: 50%;
     will-change: transform;
+  }
+
+  .warp {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(36% 16% at 68% 36%, rgba(255, 255, 255, 0.11), transparent 65%),
+      radial-gradient(28% 12% at 28% 72%, rgba(255, 255, 255, 0.055), transparent 70%);
+    mix-blend-mode: screen;
+    pointer-events: none;
   }
 
   .grooves-canvas {
@@ -278,6 +340,23 @@
     border: 1px solid rgba(0, 0, 0, 0.18);
   }
 
+  .label-wear {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 60%, rgba(120, 95, 55, 0.26) 70%, transparent 78%),
+      radial-gradient(circle at 32% 22%, transparent 36%, rgba(110, 90, 50, 0.22) 66%, transparent 80%),
+      radial-gradient(circle at 76% 78%, rgba(255, 255, 255, 0.32), transparent 52%),
+      repeating-conic-gradient(
+        from 12deg,
+        rgba(90, 70, 40, 0.05) 0 3deg,
+        transparent 3deg 14deg
+      );
+    mix-blend-mode: multiply;
+  }
+
   .cat {
     font-family: var(--font-display);
     font-size: 1.18cqw;
@@ -333,11 +412,18 @@
     background: radial-gradient(circle at 35% 30%, #fdfdfd, #9a9a9a 55%, #3a3a3a);
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.75),
-      0 0 0 1px rgba(0, 0, 0, 0.45);
+      0 0 0 1px rgba(0, 0, 0, 0.45),
+      0 0 0 4px rgba(120, 95, 55, 0.2);
   }
 
   .vinyl.single .spindle {
-    width: 7%;
+    width: 12%;
+    background: radial-gradient(
+      circle at 50% 50%,
+      #181818 0 24%,
+      #d8d8d8 27% 62%,
+      #8a8a8a 66% 100%
+    );
   }
 
   @keyframes vinyl-in {

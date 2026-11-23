@@ -63,6 +63,7 @@
 </script>
 
 <section class="crate" aria-label="Plattenkiste">
+  <div class="spotlight" aria-hidden="true"></div>
   <header class="head" data-tauri-drag-region>
     <button
       class="icon"
@@ -190,6 +191,23 @@
       linear-gradient(90deg, rgba(0, 0, 0, 0.42), transparent 9%, transparent 91%, rgba(0, 0, 0, 0.38)),
       repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 154px),
       linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 8%, transparent 92%, rgba(0, 0, 0, 0.34));
+  }
+
+  .spotlight {
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 46%;
+    pointer-events: none;
+    background: conic-gradient(
+      from 180deg at 50% 0%,
+      transparent 36%,
+      rgba(255, 222, 175, 0.11) 50%,
+      transparent 64%
+    );
+    filter: blur(18px);
+    opacity: 0.8;
   }
 
   .head {
