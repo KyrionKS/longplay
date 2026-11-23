@@ -195,11 +195,11 @@
   );
   const tubePerpX = $derived(-tubeChordY / tubeLength);
   const tubePerpY = $derived(tubeChordX / tubeLength);
-  const sBend = $derived(armLengthPx * 0.13);
-  const control1X = $derived(pivotX + tubeChordX * 0.18 + tubePerpX * sBend);
-  const control1Y = $derived(pivotY + tubeChordY * 0.18 + tubePerpY * sBend);
-  const control2X = $derived(pivotX + tubeChordX * 0.55 - tubePerpX * sBend * 0.28);
-  const control2Y = $derived(pivotY + tubeChordY * 0.55 - tubePerpY * sBend * 0.28);
+  const sBend = $derived(armLengthPx * 0.18);
+  const control1X = $derived(pivotX + tubeChordX * 0.14 + tubePerpX * sBend);
+  const control1Y = $derived(pivotY + tubeChordY * 0.14 + tubePerpY * sBend);
+  const control2X = $derived(pivotX + tubeChordX * 0.55 - tubePerpX * sBend * 0.45);
+  const control2Y = $derived(pivotY + tubeChordY * 0.55 - tubePerpY * sBend * 0.45);
   const armPath = $derived(
     `M ${pivotX} ${pivotY} C ${control1X} ${control1Y} ${control2X} ${control2Y} ${shellRearX} ${shellRearY}`,
   );
@@ -439,6 +439,15 @@
       </defs>
 
       <g filter="url(#armShadow)">
+        <!-- Aluminium base plate -->
+        <circle
+          cx={pivotX}
+          cy={pivotY}
+          r={Math.max(48, armLengthPx * 0.15)}
+          fill="url(#chrome)"
+          opacity="0.32"
+        />
+
         <!-- Gimbal housing -->
         <ellipse
           cx={pivotX}
@@ -534,6 +543,19 @@
           stroke-linecap="round"
         />
 
+        <!-- Aluminium collar before the headshell -->
+        <g transform={`translate(${shellRearX} ${shellRearY}) rotate(${shellPhiDeg})`}>
+          <rect
+            x={-armLengthPx * 0.016}
+            y={-armLengthPx * 0.019}
+            width={armLengthPx * 0.032}
+            height={armLengthPx * 0.038}
+            rx={armLengthPx * 0.014}
+            fill="url(#chrome)"
+            stroke="rgba(0,0,0,0.45)"
+          />
+        </g>
+
         <!-- Counterweight with knurled dial -->
         <g transform={`translate(${weightX} ${weightY}) rotate(${phiDeg})`}>
           <rect
@@ -579,41 +601,50 @@
 
         <!-- Headshell with finger lift, stylus centred -->
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${shellPhiDeg})`}>
-          <!-- wire finger lift -->
+          <!-- black finger lift -->
           <path
-            d={`M ${-armLengthPx * 0.02} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.005} ${-armLengthPx * 0.058} ${armLengthPx * 0.04} ${-armLengthPx * 0.03}`}
+            d={`M ${-armLengthPx * 0.018} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.008} ${-armLengthPx * 0.062} ${armLengthPx * 0.045} ${-armLengthPx * 0.03}`}
             fill="none"
-            stroke="#d8d8d8"
-            stroke-width="2.6"
+            stroke="#101010"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <path
+            d={`M ${-armLengthPx * 0.018} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.008} ${-armLengthPx * 0.062} ${armLengthPx * 0.045} ${-armLengthPx * 0.03}`}
+            fill="none"
+            stroke="rgba(255,255,255,0.22)"
+            stroke-width="1"
             stroke-linecap="round"
           />
           <!-- headshell body with lightening holes -->
           <rect
-            x={-armLengthPx * 0.065}
-            y={-armLengthPx * 0.026}
-            width={armLengthPx * 0.13}
-            height={armLengthPx * 0.052}
+            x={-armLengthPx * 0.07}
+            y={-armLengthPx * 0.028}
+            width={armLengthPx * 0.14}
+            height={armLengthPx * 0.056}
             rx="4"
             fill="#161616"
             stroke="rgba(255,255,255,0.14)"
           />
-          <ellipse cx={-armLengthPx * 0.045} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <ellipse cx={armLengthPx * 0.045} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <!-- cartridge, stylus centred -->
+          <ellipse cx={-armLengthPx * 0.052} cy="0" rx={armLengthPx * 0.011} ry={armLengthPx * 0.0075} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx="0" cy="0" rx={armLengthPx * 0.011} ry={armLengthPx * 0.0075} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx={armLengthPx * 0.052} cy="0" rx={armLengthPx * 0.011} ry={armLengthPx * 0.0075} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <!-- gold cartridge, stylus centred -->
           <rect
-            x={-armLengthPx * 0.02}
-            y={-armLengthPx * 0.017}
-            width={armLengthPx * 0.04}
-            height={armLengthPx * 0.034}
+            x={-armLengthPx * 0.021}
+            y={-armLengthPx * 0.018}
+            width={armLengthPx * 0.042}
+            height={armLengthPx * 0.036}
             rx="2"
-            fill="#b5342a"
+            fill="#c8a24a"
+            stroke="rgba(0,0,0,0.45)"
           />
           <rect
-            x={-armLengthPx * 0.007}
-            y={-armLengthPx * 0.006}
-            width={armLengthPx * 0.014}
-            height={armLengthPx * 0.012}
-            fill="#d8b45a"
+            x={-armLengthPx * 0.012}
+            y={-armLengthPx * 0.008}
+            width={armLengthPx * 0.024}
+            height={armLengthPx * 0.016}
+            fill="#1a1a1a"
           />
           <circle r={Math.max(3.4, armLengthPx * 0.013)} fill="rgba(0,0,0,0.35)" />
           <circle r={Math.max(1.9, armLengthPx * 0.0075)} fill="#f6f6f6" />
