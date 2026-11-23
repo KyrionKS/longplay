@@ -4,6 +4,7 @@
 //! side is decoded into one 48 kHz stereo buffer, which keeps playback, seeking
 //! and scratching sample accurate and free of locks in the audio callback.
 
+pub mod cue;
 pub mod decode;
 pub mod engine;
 pub mod groove;

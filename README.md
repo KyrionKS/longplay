@@ -58,8 +58,10 @@ mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
 
 **Auflegen:** Ein Klick auf eine Hülle legt die Platte mit dem kurzen Auflege-Übergang
 auf den Teller; der Tonarm bleibt in der Ablage. Beim ersten `START` schwenkt er in
-Ruhe zur äußeren Rille (~1,4 s), senkt sich ab (~0,5 s), die Nadel landet hörbar mit
-einem Drop und rund 1,6 s Knistern — erst danach beginnt die Musik.
+Ruhe zur äußeren Rille (~1,4 s), senkt sich ab (~0,5 s); danach läuft die Einlaufrille
+2–4 Sekunden mit einem echten Nadel-Aufschlag und echter Oberflächenstatik, erst dann
+beginnt der erste Track. Beide Samples variieren bei jedem Start leicht in Pegel,
+Geschwindigkeit und Startposition.
 
 **Playlists:** `.m3u`/`.m3u8`-Dateien in den gescannten Ordnern werden als
 White-Label-Testpressung gepresst: handbeschriftetes Label, „Promo · Not for Sale“
@@ -116,12 +118,15 @@ PLAN.md              Architektur, Datenmodell, Phasen, Abnahmekriterien
 
 Der vollständige Plan steht in [PLAN.md](PLAN.md).
 
-## Bild- und Schriftnachweise
+## Bild-, Schrift- und Tonnachweise
 
 - Holz: „Black Walnut Veneer 02“ von Poly Haven, CC0.
 - Papier: prozedural erzeugt (Longplay).
 - Gebürstetes Metall: prozedural erzeugt (Longplay).
 - Schrift „Caveat“: SIL Open Font License 1.1, siehe `static/fonts/OFL.txt`.
+- Nadel-Aufschlag: HenKonen, Freesound #682161, CC0.
+- Oberflächenstatik: joedeshon, Freesound #140295, CC BY 4.0.
+- Details und Änderungen: `src-tauri/assets/audio/CREDITS.md`.
 
 ## Lizenz
 

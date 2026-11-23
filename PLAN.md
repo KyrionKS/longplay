@@ -417,7 +417,7 @@ Der Interaktionskern ist erreicht; die Material- und Lichtpolitur folgt im Ästh
 - [x] Playlists als White-Label-Testpressung mit handbeschriftetem Label
 - [x] Echte Holz-/Metall-/Papier-Texturen als lokale Bitmaps
 - [x] Kurzer Vinyl-Auflege-Übergang (Hüllen-Flug bewusst verworfen)
-- [x] Start-Sequenz: Arm schwenkt aus der Ablage, Nadel senkt sich, Drop/Knistern vor der Musik (lang & hörbar)
+- [x] Start-Sequenz: Arm schwenkt aus der Ablage, Nadel senkt sich, echte Samples für Drop und Einlaufrille (2–4 s)
 - [ ] Liner-Notizen, Locked-Groove-Thump, vollständiges Reduced Motion
 
 **Abnahme:** Vergleich mit Referenz-Screenshots, 60 fps (Frame-Zeiten gemessen).

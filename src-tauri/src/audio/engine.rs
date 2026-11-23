@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use arc_swap::ArcSwapOption;
 
+use super::cue::CueVoice;
 use super::decode::TrackAudio;
 use super::noise::VinylNoise;
 use super::resample::read_interleaved;
@@ -19,6 +20,7 @@ const FADE_SECONDS: f64 = 0.02;
 
 pub struct DspState {
     noise: VinylNoise,
+    cue: CueVoice,
     lowpass: [f32; 2],
     time: f64,
     was_playing: bool,
@@ -35,6 +37,7 @@ impl DspState {
     pub fn new() -> Self {
         Self {
             noise: VinylNoise::new(0x51f0_2c3a),
+            cue: CueVoice::new(),
             lowpass: [0.0; 2],
             time: 0.0,
             was_playing: false,
@@ -343,14 +346,13 @@ impl Engine {
             let at_side_start = self.position.load(Ordering::Relaxed) as f64
                 <= f64::from(track_rate) * 0.05;
             if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) {
-                // Let the needle land and crackle before the first note. The
-                // track position stays put during this pre-roll.
-                dsp.pre_roll = u64::from(device_rate) * 8 / 5;
-                dsp.noise.trigger_surface(1.6);
+                // Let the needle land and the lead-in groove run before the
+                // first note. The track position stays put during this pre-roll.
+                let seconds = dsp.cue.start(device_rate);
+                dsp.pre_roll = (f64::from(seconds) * f64::from(device_rate)) as u64;
             } else {
                 dsp.pre_roll = 0;
             }
-            dsp.noise.trigger_drop();
             dsp.was_playing = true;
         }
 
@@ -381,13 +383,12 @@ impl Engine {
             }
 
             if dsp.pre_roll > 0 {
-                // The touchdown should be clearly audible even when the
-                // user's surface-noise character is set low.
-                let cue_character = character.max(0.8);
-                let (noise_left, noise_right) =
-                    dsp.noise.process(cue_character, device_rate, 1.0);
-                frame[0] = soft_clip(noise_left * volume);
-                frame[1] = soft_clip(noise_right * volume);
+                // Real needle drop and lead-in surface noise. Fade the last
+                // 30 ms so the start of the music does not click.
+                let (cue_left, cue_right) = dsp.cue.process(device_rate);
+                let fade = (dsp.pre_roll as f32 / (0.03 * device_rate as f32)).min(1.0);
+                frame[0] = soft_clip(cue_left * volume * fade);
+                frame[1] = soft_clip(cue_right * volume * fade);
                 dsp.pre_roll -= 1;
                 dsp.time += 1.0 / sample_rate;
                 continue;
@@ -758,7 +759,7 @@ mod tests {
         engine.load_track(track(2.0, 440.0, 0.5), 0.0);
         engine.play();
         let mut dsp = DspState::new();
-        let mut out = vec![0.0; 96_000 * 2];
+        let mut out = vec![0.0; 240_000 * 2];
         engine.process(&mut out, 48_000, &mut dsp);
         assert!(engine.position_frames() > 0, "position advances after the drop");
     }
