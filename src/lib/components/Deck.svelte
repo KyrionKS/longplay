@@ -14,9 +14,10 @@
     onSide: (index: number) => void;
     onToggle: () => void;
     onRpm: (rpm: number) => void;
+    onCover: () => void;
   }
 
-  let { album, side, sideIndex, playback, grooves, onSide, onToggle, onRpm }: Props =
+  let { album, side, sideIndex, playback, grooves, onSide, onToggle, onRpm, onCover }: Props =
     $props();
 
   const playing = $derived(!!playback?.playing && !playback?.loading);
@@ -358,6 +359,9 @@
             {/each}
             <span class="rpm-note">{rpmLabel} RPM</span>
           </div>
+          <button class="cover-link" type="button" onclick={onCover}>
+            Cover &amp; Rückseite
+          </button>
           <span class="time">
             {#if cueHold}
               {formatClock(cueHold.time)} / {formatClock(duration)}
@@ -917,6 +921,18 @@
     font-size: 8px;
     letter-spacing: 0.16em;
     color: rgba(239, 230, 207, 0.32);
+  }
+
+  .cover-link {
+    margin-top: 1px;
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(232, 207, 122, 0.72);
+  }
+
+  .cover-link:hover {
+    color: var(--brass-light);
   }
 
   .time {

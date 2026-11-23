@@ -288,11 +288,12 @@ Pro Album einmal auf Canvas vorgerendert, dann nur rotiert:
 3D-Flip der Platte (CSS `rotateY`), Label wechselt auf B, Rillenlayout wird getauscht,
 Tonarm schwenkt in die Ablage. Dauer ~600 ms, unterbrechbar.
 
-### Gatefold
+### Hülle mit Cover-Ansicht
 
-Buch mit Papierstruktur: links Cover + Metadaten (Released, Genre, Label, Laufzeit,
-Pressung), rechts Tracklist mit Punktführung, aktueller Track eingekreist, Blöcke
-„Seite A“/„Seite B“. Klick auf Track = Seek. Kein erfundener Liner-Text.
+Große Plattenhülle (min. 80 % der Bildschirmhöhe), Vorderseite mit dem Cover, per Klick
+oder Leertaste um 180° wendbar. Die Rückseite wird aus den Metadaten generiert:
+Artist, Titel, Format/RPM, Tracklist je Seite (A1/A2/B1/B2) mit Laufzeiten,
+Seiten- und Gesamtspielzeit, Katalog-Nummer und Barcode. Kein erfundener Liner-Text.
 
 ### Playlists
 

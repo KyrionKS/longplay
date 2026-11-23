@@ -52,6 +52,10 @@ kleines Etikett den Track unter dem Zeiger. Beim Cueen in einen anderen Track bl
 die Nadel sichtbar auf der Platte, während der Track nachlädt; der vorgeladene nächste
 Track springt sofort. `Leertaste` startet und stoppt.
 
+**Hülle:** „Cover & Rückseite“ am Plattenspieler (oder `G`) öffnet das Cover groß;
+Klick auf die Hülle oder `Leertaste` dreht sie um und zeigt die generierte Rückseite
+mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
+
 Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
 
 ```bash

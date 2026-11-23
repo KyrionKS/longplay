@@ -4,6 +4,7 @@
   import WoodBackground from "$lib/components/WoodBackground.svelte";
   import Crate from "$lib/components/Crate.svelte";
   import Deck from "$lib/components/Deck.svelte";
+  import Gatefold from "$lib/components/Gatefold.svelte";
   import { addMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
   import {
     loadSide,
@@ -16,6 +17,8 @@
 
   let selectedId = $state<string | null>(null);
   let sideIndex = $state(0);
+  let gatefoldOpen = $state(false);
+  let sleeveFlipped = $state(false);
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -88,6 +91,29 @@
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
         return;
       }
+      if (gatefoldOpen) {
+        if (event.key === "Escape") {
+          gatefoldOpen = false;
+          return;
+        }
+        if (
+          event.code === "Space" ||
+          event.key === "Enter" ||
+          event.key === "ArrowRight" ||
+          event.key === "ArrowLeft"
+        ) {
+          event.preventDefault();
+          sleeveFlipped = !sleeveFlipped;
+          return;
+        }
+        return;
+      }
+      if ((event.key === "g" || event.key === "G") && selected) {
+        event.preventDefault();
+        gatefoldOpen = true;
+        sleeveFlipped = false;
+        return;
+      }
       if (event.code === "Space") {
         event.preventDefault();
         toggle();
@@ -121,6 +147,8 @@
   function select(album: Album) {
     selectedId = album.id;
     sideIndex = 0;
+    gatefoldOpen = false;
+    sleeveFlipped = false;
     void loadSide(album.id, 0, false);
   }
 
@@ -171,11 +199,23 @@
       onSide={changeSide}
       onToggle={toggle}
       onRpm={changeRpm}
+      onCover={() => {
+        gatefoldOpen = true;
+        sleeveFlipped = false;
+      }}
     />
   </div>
 
   {#if library.error || playback.error}
     <div class="error" role="alert">{library.error ?? playback.error}</div>
+  {/if}
+
+  {#if gatefoldOpen && selected}
+    <Gatefold
+      album={selected}
+      bind:flipped={sleeveFlipped}
+      onClose={() => (gatefoldOpen = false)}
+    />
   {/if}
 </main>
 
