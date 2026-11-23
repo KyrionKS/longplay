@@ -290,6 +290,35 @@ mod tests {
     }
 
     #[test]
+    fn track_bands_start_exactly_at_the_audio_tracks() {
+        let side = side(&[300.0, 180.0, 240.0], &[1.5, 1.5, 1.5]);
+        let timeline = SideTimeline::from_side(&side);
+        let layout = GrooveLayout::for_side(&timeline, DiscFormat::Lp12, Rpm::R33);
+
+        for (index, track) in timeline.tracks.iter().enumerate() {
+            let band = layout
+                .bands
+                .iter()
+                .find(|band| band.kind == GrooveKind::Track && band.track_index == Some(index))
+                .unwrap_or_else(|| panic!("track band {index} missing"));
+            assert!(
+                (band.start_time - track.start).abs() < 1e-9,
+                "track {index}: band starts at {} but audio at {}",
+                band.start_time,
+                track.start
+            );
+            assert!(
+                (band.end_time - (track.start + track.duration)).abs() < 1e-9,
+                "track {index}: band ends at {} but audio at {}",
+                band.end_time,
+                track.start + track.duration
+            );
+            let radius = layout.radius_for_time(track.start).unwrap();
+            assert!((radius - band.start).abs() < 1e-6);
+        }
+    }
+
+    #[test]
     fn maps_time_to_radius_monotonically() {
         let layout = layout(&[300.0, 150.0], &[1.5, 1.5]);
         let mut previous = f64::MAX;

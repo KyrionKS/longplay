@@ -180,11 +180,13 @@
   // The headshell is offset against the arm axis; the stylus sits in its middle.
   const shellPhi = $derived(armPhi + (24 * Math.PI) / 180);
   const shellPhiDeg = $derived((shellPhi * 180) / Math.PI);
+  // The stylus is the front-centre of the headshell; the body and the tube
+  // sit behind it.
   const shellRearX = $derived(
-    stylusX - Math.cos(shellPhi) * armLengthPx * 0.032,
+    stylusX - Math.cos(shellPhi) * armLengthPx * 0.16,
   );
   const shellRearY = $derived(
-    stylusY - Math.sin(shellPhi) * armLengthPx * 0.032,
+    stylusY - Math.sin(shellPhi) * armLengthPx * 0.16,
   );
 
   // S-shaped arm tube: two opposite bends between the pivot and the headshell.
@@ -601,24 +603,9 @@
 
         <!-- Headshell with finger lift, stylus centred -->
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${shellPhiDeg})`}>
-          <!-- black finger lift -->
-          <path
-            d={`M ${-armLengthPx * 0.018} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.008} ${-armLengthPx * 0.062} ${armLengthPx * 0.045} ${-armLengthPx * 0.03}`}
-            fill="none"
-            stroke="#101010"
-            stroke-width="4"
-            stroke-linecap="round"
-          />
-          <path
-            d={`M ${-armLengthPx * 0.018} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.008} ${-armLengthPx * 0.062} ${armLengthPx * 0.045} ${-armLengthPx * 0.03}`}
-            fill="none"
-            stroke="rgba(255,255,255,0.22)"
-            stroke-width="1"
-            stroke-linecap="round"
-          />
-          <!-- headshell body with lightening holes -->
+          <!-- headshell body, stylus at the front-centre -->
           <rect
-            x={-armLengthPx * 0.08}
+            x={-armLengthPx * 0.16}
             y={-armLengthPx * 0.031}
             width={armLengthPx * 0.16}
             height={armLengthPx * 0.062}
@@ -626,25 +613,49 @@
             fill="#161616"
             stroke="rgba(255,255,255,0.14)"
           />
-          <ellipse cx={-armLengthPx * 0.06} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <ellipse cx="0" cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <ellipse cx={armLengthPx * 0.06} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
-          <!-- gold cartridge, stylus centred -->
+          <ellipse cx={-armLengthPx * 0.12} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx={-armLengthPx * 0.07} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx={-armLengthPx * 0.022} cy="0" rx={armLengthPx * 0.01} ry={armLengthPx * 0.007} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <!-- black finger lift at the front corner -->
+          <path
+            d={`M ${-armLengthPx * 0.012} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.012} ${-armLengthPx * 0.06} ${armLengthPx * 0.03} ${-armLengthPx * 0.035}`}
+            fill="none"
+            stroke="#101010"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <path
+            d={`M ${-armLengthPx * 0.012} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.012} ${-armLengthPx * 0.06} ${armLengthPx * 0.03} ${-armLengthPx * 0.035}`}
+            fill="none"
+            stroke="rgba(255,255,255,0.22)"
+            stroke-width="1"
+            stroke-linecap="round"
+          />
+          <!-- gold cartridge behind the stylus -->
           <rect
-            x={-armLengthPx * 0.024}
+            x={-armLengthPx * 0.085}
             y={-armLengthPx * 0.02}
-            width={armLengthPx * 0.048}
+            width={armLengthPx * 0.06}
             height={armLengthPx * 0.04}
             rx="2"
             fill="#c8a24a"
             stroke="rgba(0,0,0,0.45)"
           />
           <rect
-            x={-armLengthPx * 0.014}
+            x={-armLengthPx * 0.032}
             y={-armLengthPx * 0.009}
-            width={armLengthPx * 0.028}
+            width={armLengthPx * 0.03}
             height={armLengthPx * 0.018}
             fill="#1a1a1a"
+          />
+          <!-- cantilever and stylus tip at the very front -->
+          <line
+            x1={-armLengthPx * 0.004}
+            y1="0"
+            x2={0}
+            y2="0"
+            stroke="#d8d8d8"
+            stroke-width="1.6"
           />
           <circle r={Math.max(3.4, armLengthPx * 0.013)} fill="rgba(0,0,0,0.35)" />
           <circle r={Math.max(1.9, armLengthPx * 0.0075)} fill="#f6f6f6" />
