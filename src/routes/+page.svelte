@@ -4,7 +4,7 @@
   import WoodBackground from "$lib/components/WoodBackground.svelte";
   import Crate from "$lib/components/Crate.svelte";
   import Deck from "$lib/components/Deck.svelte";
-  import { addMusicFolder, library, loadLibrary } from "$lib/library.svelte";
+  import { addMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
   import {
     loadSide,
     playback,
@@ -156,6 +156,7 @@
       query={library.query}
       scanning={library.scanning || library.loading}
       onAdd={addMusicFolder}
+      onRescan={rescan}
       onSelect={select}
       onPage={(page) => (library.page = page)}
       onSort={cycleSort}

@@ -12,6 +12,7 @@
     query: string;
     scanning: boolean;
     onAdd: () => void;
+    onRescan: () => void;
     onSelect: (album: Album) => void;
     onPage: (page: number) => void;
     onSort: () => void;
@@ -27,6 +28,7 @@
     query,
     scanning,
     onAdd,
+    onRescan,
     onSelect,
     onPage,
     onSort,
@@ -168,6 +170,9 @@
       <span class="hint">Noch keine Platten — füge einen Ordner mit deiner Musik hinzu.</span>
     {:else}
       <span class="hint">{total} {total === 1 ? "Album" : "Alben"}</span>
+      <button class="text-button" type="button" disabled={scanning} onclick={onRescan}>
+        Aktualisieren
+      </button>
       <button class="text-button" type="button" onclick={onAdd}>＋ Ordner hinzufügen</button>
     {/if}
   </div>
