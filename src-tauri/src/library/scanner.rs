@@ -11,8 +11,8 @@ use super::artwork;
 use super::cue;
 use super::db::Db;
 use super::metadata;
-use super::model::{Album, DiscFormat, Palette, Rpm, Side, Track};
-use super::palette;
+use super::model::{Album, AlbumSource, DiscFormat, Palette, Rpm, Side, Track};
+use super::{m3u, palette};
 
 const AUDIO_EXTENSIONS: &[&str] = &[
     "flac", "mp3", "m4a", "aac", "wav", "aiff", "aif", "ogg", "opus", "alac",
@@ -59,6 +59,7 @@ struct AlbumMeta {
     label: Option<String>,
     folder: PathBuf,
     added_at: i64,
+    source: AlbumSource,
 }
 
 struct CueAlbum {
@@ -74,7 +75,8 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
 
     let mut audio_files = Vec::new();
     let mut cue_files = Vec::new();
-    collect_files(roots, &mut audio_files, &mut cue_files);
+    let mut playlist_files = Vec::new();
+    collect_files(roots, &mut audio_files, &mut cue_files, &mut playlist_files);
 
     let mut consumed: HashSet<PathBuf> = HashSet::new();
 
@@ -107,6 +109,16 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
         albums.push(build_from_files(entries, covers));
     }
 
+    for playlist_path in &playlist_files {
+        match build_playlist(playlist_path, covers) {
+            Ok((album, warnings)) => {
+                issues.extend(warnings);
+                albums.push(album);
+            }
+            Err(issue) => issues.push(issue),
+        }
+    }
+
     albums.sort_by_key(|album| std::cmp::Reverse(album.added_at));
 
     let tracks: usize = albums.iter().map(|album| album.track_count as usize).sum();
@@ -120,7 +132,12 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
     })
 }
 
-fn collect_files(roots: &[PathBuf], audio: &mut Vec<PathBuf>, cues: &mut Vec<PathBuf>) {
+fn collect_files(
+    roots: &[PathBuf],
+    audio: &mut Vec<PathBuf>,
+    cues: &mut Vec<PathBuf>,
+    playlists: &mut Vec<PathBuf>,
+) {
     for root in roots {
         if !root.is_dir() {
             continue;
@@ -141,6 +158,8 @@ fn collect_files(roots: &[PathBuf], audio: &mut Vec<PathBuf>, cues: &mut Vec<Pat
                 .unwrap_or_default();
             if extension == "cue" {
                 cues.push(path);
+            } else if extension == "m3u" || extension == "m3u8" {
+                playlists.push(path);
             } else if AUDIO_EXTENSIONS.contains(&extension.as_str()) {
                 audio.push(path);
             }
@@ -258,6 +277,7 @@ fn build_from_files(entries: Vec<(PathBuf, metadata::FileTags)>, covers: &Path) 
             label: first.label.clone(),
             folder,
             added_at,
+            source: AlbumSource::Release,
         },
         tracks,
         cover_source,
@@ -265,8 +285,104 @@ fn build_from_files(entries: Vec<(PathBuf, metadata::FileTags)>, covers: &Path) 
     )
 }
 
-fn build_from_cue(cue_path: &Path, covers: &Path) -> Result<CueAlbum, String> {
-    let bytes = fs::read(cue_path).map_err(|e| format!("{}: {e}", cue_path.display()))?;
+/// Builds an album from an M3U/M3U8 playlist. Playlists are pressed as
+/// white-label test pressings: no cover, "Test Pressing" as label and the usual
+/// side split. Entries are resolved relative to the playlist file.
+fn build_playlist(path: &Path, covers: &Path) -> Result<(Album, Vec<String>), String> {
+    let bytes = fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let playlist = m3u::parse(&bytes);
+    let folder = path.parent().map(Path::to_path_buf).unwrap_or_default();
+
+    let mut tracks = Vec::new();
+    let mut warnings = Vec::new();
+    let mut missing = 0usize;
+
+    for (index, entry) in playlist.entries.iter().enumerate() {
+        let resolved = if entry.path.is_absolute() {
+            entry.path.clone()
+        } else {
+            folder.join(&entry.path)
+        };
+        if !resolved.is_file() {
+            missing += 1;
+            continue;
+        }
+
+        let tags = metadata::read(&resolved).ok();
+        let duration = tags
+            .as_ref()
+            .map(|tags| tags.duration)
+            .filter(|duration| *duration > 0.01)
+            .or(entry.duration)
+            .unwrap_or(0.0);
+        let title = entry
+            .title
+            .clone()
+            .or_else(|| tags.as_ref().and_then(|tags| tags.title.clone()))
+            .or_else(|| {
+                resolved
+                    .file_stem()
+                    .map(|stem| stem.to_string_lossy().into_owned())
+            })
+            .unwrap_or_else(|| format!("Track {}", index + 1));
+        let artist = tags
+            .as_ref()
+            .and_then(|tags| tags.artist.clone().or_else(|| tags.album_artist.clone()))
+            .unwrap_or_else(|| "Verschiedene Künstler".to_string());
+
+        tracks.push(BuiltTrack {
+            number: index as u32 + 1,
+            title,
+            artist,
+            duration,
+            pregap: 0.0,
+            path: resolved,
+            offset: 0.0,
+            side_hint: None,
+        });
+    }
+
+    if missing > 0 {
+        warnings.push(format!(
+            "{}: {missing} Einträge nicht gefunden",
+            path.display()
+        ));
+    }
+    if tracks.is_empty() {
+        return Err(format!("{}: keine abspielbaren Tracks", path.display()));
+    }
+
+    let first_artist = tracks[0].artist.clone();
+    let album_artist = if tracks.iter().all(|track| track.artist == first_artist) {
+        first_artist
+    } else {
+        "Verschiedene Künstler".to_string()
+    };
+    let title = path
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Playlist".to_string());
+
+    let album = assemble(
+        AlbumMeta {
+            title,
+            album_artist,
+            year: None,
+            genre: None,
+            label: Some("Test Pressing".to_string()),
+            folder,
+            added_at: mtime_secs(path),
+            source: AlbumSource::Playlist,
+        },
+        tracks,
+        None,
+        covers,
+    );
+
+    Ok((album, warnings))
+}
+
+fn build_from_cue(cue_path: &Path, covers: &Path) -> Result<CueAlbum, String> {    let bytes = fs::read(cue_path).map_err(|e| format!("{}: {e}", cue_path.display()))?;
     let sheet = cue::parse_bytes(&bytes).map_err(|e| format!("{}: {e}", cue_path.display()))?;
     let folder = cue_path.parent().map(Path::to_path_buf).unwrap_or_default();
 
@@ -393,6 +509,7 @@ fn build_from_cue(cue_path: &Path, covers: &Path) -> Result<CueAlbum, String> {
             label: None,
             folder,
             added_at,
+            source: AlbumSource::Release,
         },
         tracks,
         cover_source,
@@ -432,11 +549,16 @@ fn assemble(
     // Only clearly short two-track releases are treated as 7" singles. A
     // two-track 12" EP would otherwise be drawn on a 7" record. Real format
     // tags are the long-term fix (see PLAN.md, open issue).
-    let format = if tracks.len() <= 2 && total <= 480.0 {
+    let mut format = if tracks.len() <= 2 && total <= 480.0 {
         DiscFormat::Single7
     } else {
         DiscFormat::Lp12
     };
+    // Playlists are pressed as 12" white-label test pressings; the 7" shortcut
+    // would make the handwritten label unreadable.
+    if matches!(meta.source, AlbumSource::Playlist) {
+        format = DiscFormat::Lp12;
+    }
     let rpm = match format {
         DiscFormat::Single7 => Rpm::R45,
         _ => Rpm::R33,
@@ -508,6 +630,7 @@ fn assemble(
         cover,
         palette,
         format,
+        source: meta.source,
         sides,
         folder: meta.folder.to_string_lossy().into_owned(),
         track_count,
@@ -830,6 +953,55 @@ mod scan_tests {
             .map(|album| album.id.clone())
             .collect();
         assert_eq!(ids, again, "album ids must be stable across scans");
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn scans_m3u_playlists_as_test_pressings() {
+        let root = temp_root("playlist");
+        let covers = root.join(".covers");
+
+        let folder = root.join("Marlowe");
+        fs::create_dir_all(&folder).unwrap();
+        write_wav(&folder.join("one.wav"), 5.0);
+        write_wav(&folder.join("two.wav"), 7.0);
+        write_wav(&folder.join("three.wav"), 9.0);
+
+        fs::write(
+            root.join("Late Night.m3u"),
+            "#EXTM3U\n\
+             #EXTINF:5,Opening\n\
+             Marlowe/one.wav\n\
+             #EXTINF:7,Second Song\n\
+             Marlowe/two.wav\n\
+             Marlowe/missing.wav\n",
+        )
+        .unwrap();
+
+        let mut db = Db::in_memory().unwrap();
+        let summary = scan(std::slice::from_ref(&root), &mut db, &covers).unwrap();
+        assert_eq!(summary.albums, 2, "folder release plus one playlist");
+        assert_eq!(summary.issues.len(), 1, "missing entry must be reported");
+
+        let album = db
+            .load_albums()
+            .unwrap()
+            .into_iter()
+            .find(|album| album.source == AlbumSource::Playlist)
+            .expect("playlist album");
+
+        assert_eq!(album.title, "Late Night");
+        assert_eq!(album.label.as_deref(), Some("Test Pressing"));
+        assert_eq!(album.format, DiscFormat::Lp12, "playlists are 12\" pressings");
+        assert_eq!(album.sides[0].rpm, Rpm::R33);
+        assert_eq!(album.track_count, 2);
+        let tracks: Vec<_> = album.sides.iter().flat_map(|side| &side.tracks).collect();
+        assert_eq!(tracks[0].title, "Opening", "EXTINF title wins");
+        assert_eq!(tracks[1].title, "Second Song");
+        assert!(tracks.iter().all(|track| track.artist == "Verschiedene Künstler"));
+        assert!((tracks[0].duration - 5.0).abs() < 0.2);
+        assert!((tracks[1].duration - 7.0).abs() < 0.2);
 
         fs::remove_dir_all(&root).ok();
     }

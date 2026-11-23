@@ -4,6 +4,7 @@
 </script>
 
 <div class="wood" aria-hidden="true">
+  <div class="texture"></div>
   <div class="grain"></div>
   <div class="light"></div>
   <div class="vignette"></div>
@@ -15,20 +16,18 @@
     inset: 0;
     background-color: var(--wood-mid);
     background-image:
-      radial-gradient(120% 70% at 42% -8%, rgba(255, 214, 160, 0.14), transparent 58%),
-      repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.11) 0 1px,
-        rgba(255, 255, 255, 0.01) 1px 3px,
-        transparent 3px 7px
-      ),
-      repeating-linear-gradient(
-        0deg,
-        rgba(255, 190, 120, 0.03) 0 1px,
-        transparent 1px 21px
-      ),
-      linear-gradient(178deg, #462b1a 0%, #33200f 46%, #24140c 100%);
-    background-blend-mode: normal, multiply, overlay, normal;
+      radial-gradient(120% 70% at 42% -8%, rgba(255, 214, 160, 0.16), transparent 58%),
+      linear-gradient(180deg, rgba(32, 16, 7, 0.5), rgba(18, 9, 4, 0.72));
+  }
+
+  .texture {
+    position: absolute;
+    inset: 0;
+    background-image: url("/textures/wood.jpg");
+    background-size: 960px 960px;
+    background-position: center;
+    filter: saturate(0.85) brightness(0.72) contrast(1.06);
+    opacity: 0.92;
   }
 
   .grain {

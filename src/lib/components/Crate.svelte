@@ -362,10 +362,12 @@
     position: relative;
     aspect-ratio: 1;
     border-radius: 2px;
-    background:
-      linear-gradient(180deg, rgba(0, 0, 0, 0.34), rgba(255, 180, 110, 0.03)),
-      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 2px, transparent 2px 7px),
-      #241407;
+    background-color: #241407;
+    background-image:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.58), rgba(20, 10, 4, 0.72)),
+      url("/textures/wood.jpg");
+    background-size: auto, 190px 190px;
+    background-blend-mode: multiply, normal;
     box-shadow:
       0 1px 0 rgba(255, 205, 150, 0.08),
       0 0 0 1px rgba(0, 0, 0, 0.45) inset,
@@ -420,9 +422,12 @@
     height: 12px;
     margin: 0 -6px;
     border-radius: 1px;
-    background:
-      linear-gradient(180deg, rgba(255, 214, 160, 0.28), transparent 30%),
-      linear-gradient(180deg, #7b4a29, #4a2a17 55%, #2a1710 100%);
+    background-color: #4a2a17;
+    background-image:
+      linear-gradient(180deg, rgba(255, 214, 160, 0.28), transparent 34%, rgba(0, 0, 0, 0.35)),
+      url("/textures/wood.jpg");
+    background-size: auto, 240px 64px;
+    background-blend-mode: screen, multiply;
     box-shadow:
       0 1px 0 rgba(255, 225, 175, 0.25) inset,
       0 6px 10px rgba(0, 0, 0, 0.45);

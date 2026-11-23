@@ -6,6 +6,7 @@
 pub mod artwork;
 pub mod cue;
 pub mod db;
+pub mod m3u;
 pub mod metadata;
 pub mod model;
 pub mod palette;

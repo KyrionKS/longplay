@@ -10,10 +10,21 @@
   }: { album: Album; onClose: () => void; flipped?: boolean } = $props();
 
   const cover = $derived(coverUrl(album));
-  const formatLabel = $derived(album.format === "single7" ? "7″ Single" : "12″ LP");
+  const playlist = $derived(album.source === "playlist");
+  const formatLabel = $derived(
+    playlist
+      ? "12″ Test Pressing"
+      : album.format === "single7"
+        ? "7″ Single"
+        : "12″ LP",
+  );
   const rpm = $derived(album.sides[0]?.rpm === "45" ? "45" : "33⅓");
+  const handRpm = $derived(rpm === "33⅓" ? "33 1/3" : rpm);
   const catalog = $derived(
-    album.sides[0]?.matrix?.replace(/-[A-D]$/, "") ?? `LP-${album.id.slice(0, 6).toUpperCase()}`,
+    playlist
+      ? `TP-${album.id.slice(0, 6).toUpperCase()}`
+      : (album.sides[0]?.matrix?.replace(/-[A-D]$/, "") ??
+        `LP-${album.id.slice(0, 6).toUpperCase()}`),
   );
   const barcode = $derived(
     album.id
@@ -48,13 +59,21 @@
       class="sleeve"
       class:flipped
       class:many={manyTracks}
+      class:test={playlist}
       type="button"
       onclick={() => (flipped = !flipped)}
       title={flipped ? "Vorderseite zeigen" : "Rückseite zeigen"}
     >
       <div class="sleeve-inner">
         <div class="face front">
-          {#if cover}
+          {#if playlist}
+            <div class="test-front">
+              <span class="test-stamp">Test Pressing</span>
+              <span class="test-hand">{album.title}</span>
+              <span class="test-hand small">{album.albumArtist}</span>
+              <span class="test-note">{totalTracks} Tracks · {handRpm} RPM · {catalog}</span>
+            </div>
+          {:else if cover}
             <img src={cover} alt="" draggable="false" />
           {:else}
             <div
@@ -70,14 +89,14 @@
           <span class="front-wear" aria-hidden="true"></span>
         </div>
 
-        <div class="face back">
+        <div class="face back" class:test={playlist}>
           <header class="back-head">
             <span class="back-artist">{album.albumArtist}</span>
             <h2>{album.title}</h2>
             <div class="back-rule" style:background={album.palette.accent}></div>
             <p class="back-sub">
               {formatLabel} · {rpm} RPM · Stereo
-              {#if album.label} · {album.label}{/if}
+              {#if album.label && !playlist} · {album.label}{/if}
               {#if album.year} · {album.year}{/if}
             </p>
           </header>
@@ -110,16 +129,20 @@
               <span class="small">Hergestellt mit Longplay · Direct Drive</span>
             </div>
             <div class="barcode-wrap">
-              <div class="barcode" aria-hidden="true">
-                {#each bars as bar, index}
-                  <span
-                    class:ink={bar.ink}
-                    style:flex={bar.weight}
-                    data-index={index}
-                  ></span>
-                {/each}
-              </div>
-              <span class="barcode-text">{barcode}</span>
+              {#if playlist}
+                <span class="promo">Promo · Not for Sale</span>
+              {:else}
+                <div class="barcode" aria-hidden="true">
+                  {#each bars as bar, index}
+                    <span
+                      class:ink={bar.ink}
+                      style:flex={bar.weight}
+                      data-index={index}
+                    ></span>
+                  {/each}
+                </div>
+                <span class="barcode-text">{barcode}</span>
+              {/if}
             </div>
           </footer>
         </div>
@@ -248,10 +271,93 @@
     line-height: 1.05;
   }
 
+  .test-front {
+    width: 100%;
+    height: 100%;
+    padding: 9%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1.5vmin;
+    color: #23262e;
+    background-color: #efe7d2;
+    background-image: url("/textures/paper-soft.jpg");
+    background-size: 420px 420px;
+    background-blend-mode: multiply;
+  }
+
+  .test-stamp {
+    align-self: flex-end;
+    margin-bottom: 4vmin;
+    padding: 0.7vmin 1.1vmin;
+    border: 1px solid rgba(150, 38, 38, 0.58);
+    border-radius: 1px;
+    color: rgba(150, 38, 38, 0.76);
+    font-family: var(--font-display);
+    font-size: 2.3vmin;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transform: rotate(-10deg);
+  }
+
+  .test-hand {
+    font-family: var(--font-hand);
+    font-size: 7.6vmin;
+    line-height: 1.02;
+    transform: rotate(-1.8deg);
+  }
+
+  .test-hand.small {
+    font-size: 3.4vmin;
+    opacity: 0.85;
+    transform: rotate(-1.2deg);
+  }
+
+  .test-note {
+    margin-top: 2vmin;
+    font-family: var(--font-hand);
+    font-size: 2.4vmin;
+    opacity: 0.62;
+    transform: rotate(-1deg);
+  }
+
+  .back.test {
+    background-color: #efe7d2;
+    background-image: url("/textures/paper-soft.jpg");
+    background-size: 420px 420px;
+    background-blend-mode: multiply;
+    color: #23262e;
+  }
+
+  .back.test .back-head h2,
+  .back.test .back-artist,
+  .back.test .ttl,
+  .back.test .num,
+  .back.test .dur,
+  .back.test .side-head {
+    font-family: var(--font-hand);
+  }
+
+  .back.test .back-rule {
+    display: none;
+  }
+
+  .promo {
+    padding: 0.9vmin 1.4vmin;
+    border: 1px solid rgba(150, 38, 38, 0.58);
+    border-radius: 1px;
+    color: rgba(150, 38, 38, 0.78);
+    font-family: var(--font-display);
+    font-size: 1.5vmin;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transform: rotate(-4deg);
+  }
+
   .back {
     transform: rotateY(180deg);
     color: #1a1410;
-    position: relative;
     padding: 5.6% 6%;
     display: flex;
     flex-direction: column;
@@ -273,15 +379,15 @@
   }
 
   .back-head h2 {
-    margin: 0.4vmin 0 0;
+    margin: 0.6vmin 0 0;
     font-family: var(--font-display);
-    font-size: 4.2vmin;
+    font-size: 5.6vmin;
     font-weight: 400;
     line-height: 1.02;
   }
 
   .back-artist {
-    font-size: 1.3vmin;
+    font-size: 1.5vmin;
     letter-spacing: 0.22em;
     text-transform: uppercase;
     opacity: 0.6;
@@ -289,13 +395,13 @@
 
   .back-rule {
     height: 2px;
-    margin: 1.6vmin 0 1.2vmin;
+    margin: 1.8vmin 0 1.4vmin;
     opacity: 0.75;
   }
 
   .back-sub {
     margin: 0;
-    font-size: 1.15vmin;
+    font-size: 1.3vmin;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     opacity: 0.5;
@@ -318,9 +424,9 @@
   .side-head {
     display: flex;
     justify-content: space-between;
-    padding-bottom: 0.8vmin;
+    padding-bottom: 1vmin;
     border-bottom: 1px solid rgba(26, 20, 16, 0.22);
-    font-size: 1.1vmin;
+    font-size: 1.35vmin;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     opacity: 0.65;
@@ -328,42 +434,43 @@
 
   .tracks {
     list-style: none;
-    margin: 1.2vmin 0 0;
+    margin: 1.4vmin 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.5vmin;
+    gap: 0.8vmin;
   }
 
   .tracks li {
     display: flex;
     align-items: baseline;
-    gap: 0.7vmin;
-    font-size: 1.5vmin;
-    line-height: 1.25;
+    gap: 0.8vmin;
+    font-size: 1.95vmin;
+    line-height: 1.28;
   }
 
   .many .tracks li {
-    font-size: 1.25vmin;
+    font-size: 1.5vmin;
   }
 
   .num {
-    width: 3.4vmin;
-    flex: 0 0 3.4vmin;
+    width: 4vmin;
+    flex: 0 0 4vmin;
     text-align: right;
     opacity: 0.55;
     font-variant-numeric: tabular-nums;
   }
 
   .ttl {
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 76%;
   }
 
   .dots {
-    flex: 1;
+    flex: 0 0 7%;
     border-bottom: 1px dotted rgba(26, 20, 16, 0.35);
     transform: translateY(-0.4vmin);
   }

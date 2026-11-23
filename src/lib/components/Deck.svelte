@@ -11,14 +11,27 @@
     sideIndex: number;
     playback: PlaybackState | null;
     grooves: GrooveBand[];
+    conceal?: boolean;
+    onGeometry?: (geometry: { x: number; y: number; r: number }) => void;
     onSide: (index: number) => void;
     onToggle: () => void;
     onRpm: (rpm: number) => void;
     onCover: () => void;
   }
 
-  let { album, side, sideIndex, playback, grooves, onSide, onToggle, onRpm, onCover }: Props =
-    $props();
+  let {
+    album,
+    side,
+    sideIndex,
+    playback,
+    grooves,
+    conceal = false,
+    onGeometry,
+    onSide,
+    onToggle,
+    onRpm,
+    onCover,
+  }: Props = $props();
 
   const playing = $derived(!!playback?.playing && !playback?.loading);
   const loading = $derived(!!playback?.loading);
@@ -55,6 +68,11 @@
       centerX = platterRect.left - stageRect.left + platterRect.width / 2;
       centerY = platterRect.top - stageRect.top + platterRect.height / 2;
       platterRadius = platterRect.width / 2;
+      onGeometry?.({
+        x: stageRect.left + centerX,
+        y: stageRect.top + centerY,
+        r: platterRadius * RECORD_RADIUS_FACTOR,
+      });
     };
 
     measure();
@@ -331,9 +349,11 @@
           </svg>
 
           {#if album && side}
-            {#key `${album.id}:${side.label}`}
-              <Vinyl {album} {side} {grooves} />
-            {/key}
+            <div class="record-slot" class:concealed={conceal}>
+              {#key `${album.id}:${side.label}`}
+                <Vinyl {album} {side} {grooves} />
+              {/key}
+            </div>
           {:else}
             <div class="mat"></div>
             <div class="spindle"></div>
@@ -802,6 +822,15 @@
     will-change: transform;
   }
 
+  .record-slot {
+    position: absolute;
+    inset: 0;
+  }
+
+  .record-slot.concealed {
+    visibility: hidden;
+  }
+
   .strobe {
     position: absolute;
     inset: 0;
@@ -815,21 +844,25 @@
     inset: 0;
     border-radius: 50%;
     pointer-events: none;
-    background: conic-gradient(
-      from 210deg,
-      #585858,
-      #c9c9c9 12%,
-      #6a6a6a 26%,
-      #ededed 40%,
-      #5f5f5f 54%,
-      #b5b5b5 68%,
-      #565656 82%,
-      #d6d6d6 92%,
-      #585858
-    );
+    background-image:
+      url("/textures/metal.jpg"),
+      conic-gradient(
+        from 210deg,
+        #585858,
+        #c9c9c9 12%,
+        #6a6a6a 26%,
+        #ededed 40%,
+        #5f5f5f 54%,
+        #b5b5b5 68%,
+        #565656 82%,
+        #d6d6d6 92%,
+        #585858
+      );
+    background-size: 260px 260px, auto;
+    background-blend-mode: overlay, normal;
     -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0 95.2%, #000 95.6%);
     mask: radial-gradient(circle at 50% 50%, transparent 0 95.2%, #000 95.6%);
-    opacity: 0.55;
+    opacity: 0.62;
   }
 
   .mat {

@@ -8,9 +8,9 @@ Schallplatten in einer Holzkiste, legt sie auf einen Direct-Drive-Plattenspieler
 lässt dich den Tonarm von Hand aufsetzen, zwischen 33⅓ und 45 umschalten und Alben wie
 echte LPs in Seite A und B teilen — inklusive Knistern, Rumpeln und subtiler Nadelphysik.
 
-> **Status:** Phase 3 — Interaktion. Der Tonarm folgt der Rille, lässt sich zum Cueen
-> ziehen, kehrt am Seitenende zurück; die Platte dreht mit Anlauf und Auslauf, Singles
-> sind kleiner, Seite A/B flip. Material- und Lichtpolitur folgt.
+> **Status:** Phase 4 — Optik. Tonarm, Rillenlayout, Seitenwechsel und Cueing stehen;
+> die Hülle hebt sich aus der Kiste und die Platte gleitet auf den Teller, Materialien
+> kommen als echte Texturen, Playlists werden als White-Label-Testpressung gepresst.
 
 ![Longplay mit geladenem Album](docs/phase3.png)
 
@@ -56,9 +56,20 @@ Track springt sofort. `Leertaste` startet und stoppt.
 Klick auf die Hülle oder `Leertaste` dreht sie um und zeigt die generierte Rückseite
 mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
 
+**Auflegen:** Ein Klick auf eine Hülle hebt sie aus der Kiste, zieht die Platte heraus
+und legt sie auf den Teller; die Nadel steht danach bereit. Bei reduzierter Bewegung
+springt die Ansicht direkt zum aufgelegten Album.
+
+**Playlists:** `.m3u`/`.m3u8`-Dateien in den gescannten Ordnern werden als
+White-Label-Testpressung gepresst: handbeschriftetes Label, Papierhülle mit Stempel,
+„Promo · Not for Sale“ statt Barcode. Relative Pfade gelten ab dem Playlist-Ordner,
+fehlende Einträge erscheinen als Hinweis. Ein `#EXTINF`-Titel und seine Dauer haben
+Vorrang vor den Tags der Audiodatei.
+
 **Material:** Papierkanten und Ringwear an den Hüllen, Abrieb und Pressring am Label,
 Staub und feine Kratzer auf der Platte, ein wandernder Warp-Glanz und ein warmer
-Lichtkegel über der Kiste. Alles prozedural, keine zusätzlichen Bilddateien.
+Lichtkegel über der Kiste. Holz, gebürstetes Metall und Papier liegen als lokale
+Bitmaps in `static/textures/`; Verschleiß, Licht und Staub bleiben prozedural.
 
 Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
 
@@ -95,13 +106,20 @@ npm run tauri build
 src/                 Svelte-Oberfläche (Crate, Deck, später Gatefold)
 src-tauri/src/
   audio/             Dekoder, Ringpuffer, Resampler, Vinyl-Geräusche
-  library/           Scan, Tags, CUE, Cover, Palette, SQLite
+  library/           Scan, Tags, CUE, M3U, Cover, Palette, SQLite
   playback/          Timeline, Queue, Tonarm, Zustandsmaschine
   platform/          Menübar, Now Playing, Media-Keys
 PLAN.md              Architektur, Datenmodell, Phasen, Abnahmekriterien
 ```
 
 Der vollständige Plan steht in [PLAN.md](PLAN.md).
+
+## Bild- und Schriftnachweise
+
+- Holz: „Black Walnut Veneer 02“ von Poly Haven, CC0.
+- Papier: prozedural erzeugt (Longplay).
+- Gebürstetes Metall: prozedural erzeugt (Longplay).
+- Schrift „Caveat“: SIL Open Font License 1.1, siehe `static/fonts/OFL.txt`.
 
 ## Lizenz
 

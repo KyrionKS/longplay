@@ -3,7 +3,9 @@
 Ein skeuomorpher Plattenspieler für die eigene Musiksammlung auf macOS.
 Arbeitstitel: **Longplay** (Namenskollision mit longplay.app beachten, finaler Name vor Phase 5).
 
-**Status 2026-11-22:** Phase 0 bis 2 und der Interaktionskern von Phase 3 sind umgesetzt. Offen: Material/Licht der Ästhetik.
+**Status 2026-11-23:** Phase 3 ist abgeschlossen; der Ästhetik-Pass (Phase 4) läuft.
+Umgesetzt: echte Materialtexturen, White-Label-Playlists und die Hülle-auf-Teller-Animation.
+Offen: Liner-Notizen, Locked-Groove-Thump, letzte Licht- und Animationsdetails.
 
 ---
 
@@ -297,8 +299,12 @@ Seiten- und Gesamtspielzeit, Katalog-Nummer und Barcode. Kein erfundener Liner-T
 
 ### Playlists
 
-White-Label-Testpressung: weißes Label, handgeschriebene Anmutung, Tracklist als Stempel.
-Pausen 0.
+`.m3u`/`.m3u8` werden beim Scan als zusätzliche Alben gepresst. Pfade gelten relativ
+zum Playlist-Ordner, `#EXTINF`-Titel und -Dauer haben Vorrang, fehlende Dateien werden
+als Scan-Hinweis gemeldet. Eine Playlist ist immer eine 12″-White-Label-Testpressung:
+Papierhülle mit Stempel, handgeschriebene Anmutung (gebündelte Schrift „Caveat“),
+„Promo · Not for Sale“ statt Barcode, Pausen 0. Ein `A`/`B`-Schnitt nach Spielzeit
+bleibt wie bei LPs.
 
 ### Vinyl-Ästhetik (Vorschlag)
 
@@ -311,7 +317,8 @@ Priorisiert nach Wirkung, nicht nach Aufwand:
    Auslauf bis 54 mm; 7″ 175 mm, Label 86 mm, Musik 84→45 mm. Zwischen den Tracks
    liegt ein 1,6–1,8 mm breites Land.
 2. **Material:** Label-Abrieb am Rand, leicht vergilbtes Papier, Ring-Abdruck des
-   Vinyls auf der Hülle, abgestoßene Sleeve-Ecken.
+   Vinyls auf der Hülle, abgestoßene Sleeve-Ecken. Holz, Metall und Papier als lokale
+   Bitmaps in `static/textures/`; Abrieb und Staub bleiben prozedural.
 3. **Tote Rille:** Matrix-Nummer und Presswerks-Kürzel eingeritzt, Staub und feine
    Haarkratzer deterministisch pro Album.
 4. **Bewegung:** Teller-Anlauf/Auslauf mit Trägheit, 20-ms-Nadel-Absetzen, Warp-Reflex,
@@ -319,6 +326,7 @@ Priorisiert nach Wirkung, nicht nach Aufwand:
 5. **Licht:** ein beweglicher Glanzstreifen, Staub im Lichtkegel, weicher Schatten
    unter dem Arm.
 6. **Hülle → Teller:** Sleeve hebt sich, Platte gleitet heraus und sinkt auf den Teller.
+   Umgesetzt als Overlay-Flug; bei reduzierter Bewegung entfällt er.
 7. **Track-Hover:** Zeiger über einem Rillenband zeigt den Tracktitel als geätzte
    Beschriftung; Klick cueed dorthin.
 8. **Ambiente:** 7″-Single kleiner als 12″, großes Loch, 45-Adapter; Gatefold mit
@@ -406,9 +414,10 @@ Der Interaktionskern ist erreicht; die Material- und Lichtpolitur folgt im Ästh
 - [x] Lichtkegel über der Kiste, Vignette
 - [x] Tonarm, Knöpfe, Bürste
 - [x] Hülle (großes Cover, wendbar, generierte Rückseite), Singles
-- [ ] Playlists als White-Label, Liner-Notizen
-- [ ] Echte Holz-/Metall-Texturen als Bitmaps (aktuell prozedural)
-- [ ] Hüllen-Animation, vollständiges Reduced Motion
+- [x] Playlists als White-Label-Testpressung mit handbeschriftetem Label
+- [x] Echte Holz-/Metall-/Papier-Texturen als lokale Bitmaps
+- [x] Hüllen-Animation: Sleeve hebt sich, Platte gleitet auf den Teller
+- [ ] Liner-Notizen, Locked-Groove-Thump, vollständiges Reduced Motion
 
 **Abnahme:** Vergleich mit Referenz-Screenshots, 60 fps (Frame-Zeiten gemessen).
 

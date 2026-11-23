@@ -1,5 +1,6 @@
 export type Rpm = "33" | "45";
 export type DiscFormat = "lp12" | "single7" | "unknown";
+export type AlbumSource = "release" | "playlist";
 export type SortKey = "added" | "artist" | "album" | "year";
 
 export interface Palette {
@@ -40,6 +41,7 @@ export interface Album {
   cover: string | null;
   palette: Palette;
   format: DiscFormat;
+  source: AlbumSource;
   sides: Side[];
   folder: string;
   trackCount: number;

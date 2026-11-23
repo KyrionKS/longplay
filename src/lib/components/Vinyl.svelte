@@ -15,6 +15,8 @@
     sideDuration >= 60 ? `${Math.round(sideDuration / 60)} MIN` : formatDuration(sideDuration),
   );
   const rpm = $derived(side.rpm === "45" ? "45" : "33⅓");
+  const testPressing = $derived(album.source === "playlist");
+  const handRpm = $derived(rpm === "33⅓" ? "33 1/3" : rpm);
 
 
   let canvas: HTMLCanvasElement | undefined = $state();
@@ -155,28 +157,37 @@
 <div
   class="vinyl"
   class:single={side.rpm === "45"}
+  class:test-pressing={testPressing}
   bind:this={host}
-  style:--vinyl={album.palette.vinyl}
-  style:--light={album.palette.vinylLight}
-  style:--label={album.palette.label}
-  style:--ink={album.palette.dark}
+  style:--vinyl={testPressing ? "#171717" : album.palette.vinyl}
+  style:--light={testPressing ? "#2c2c2c" : album.palette.vinylLight}
+  style:--label={testPressing ? "#efe9da" : album.palette.label}
+  style:--ink={testPressing ? "#1f2228" : album.palette.dark}
 >
   <div class="disc-layer" aria-hidden="true">
     <div class="grooves"></div>
     <div class="warp" aria-hidden="true"></div>
     <canvas class="grooves-canvas" bind:this={canvas} aria-hidden="true"></canvas>
 
-    <div class="label">
+    <div class="label" class:white={testPressing}>
       <div class="label-wear" aria-hidden="true"></div>
-      <div class="top">
-        <span class="cat">{side.matrix ?? "LONGPLAY"}</span>
-        <span class="title">{album.title}</span>
-      </div>
-      <div class="bottom">
-        <span class="artist">{album.albumArtist}</span>
-        <span class="meta">SEITE {side.label} · {rpm} RPM</span>
-        <span class="meta dim">{side.tracks.length} TRACKS · {durationLabel}</span>
-      </div>
+      {#if testPressing}
+        <span class="stamp">Test Pressing</span>
+        <span class="hand-title">{album.title}</span>
+        <span class="hand-side">Seite {side.label}</span>
+        <span class="hand-meta">{handRpm} RPM · {side.tracks.length} Tracks</span>
+        <span class="hand-meta tiny">Promo · Not for Sale</span>
+      {:else}
+        <div class="top">
+          <span class="cat">{side.matrix ?? "LONGPLAY"}</span>
+          <span class="title">{album.title}</span>
+        </div>
+        <div class="bottom">
+          <span class="artist">{album.albumArtist}</span>
+          <span class="meta">SEITE {side.label} · {rpm} RPM</span>
+          <span class="meta dim">{side.tracks.length} TRACKS · {durationLabel}</span>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -399,6 +410,108 @@
 
   .meta.dim {
     opacity: 0.55;
+  }
+
+  .label.white {
+    display: block;
+    padding: 0;
+    overflow: hidden;
+    color: #20232b;
+    background-color: #f2ecdd;
+    background-image:
+      radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.95), transparent 58%),
+      url("/textures/paper-soft.jpg");
+    background-size: auto, 120px 120px;
+    background-blend-mode: screen, multiply;
+  }
+
+  .label.white::before {
+    border-color: rgba(60, 52, 38, 0.12);
+  }
+
+  .label.white .label-wear {
+    opacity: 0.35;
+  }
+
+  .stamp {
+    position: absolute;
+    top: 7%;
+    left: 50%;
+    padding: 0.3em 0.5em;
+    border: 1px solid rgba(148, 34, 34, 0.6);
+    border-radius: 1px;
+    color: rgba(148, 34, 34, 0.78);
+    font-family: var(--font-display);
+    font-size: 1.55cqw;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-transform: uppercase;
+    transform: translateX(-50%) rotate(-8deg);
+    white-space: nowrap;
+  }
+
+  .hand-title,
+  .hand-side,
+  .hand-meta {
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    font-family: var(--font-hand);
+    text-align: center;
+    line-height: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .hand-title {
+    top: 20%;
+    max-height: 2.1em;
+    font-size: 2.9cqw;
+    line-height: 0.98;
+    white-space: normal;
+    transform: rotate(-2deg);
+    color: #232b3b;
+  }
+
+  .hand-side {
+    top: 57%;
+    font-size: 2.2cqw;
+    transform: rotate(-1.2deg);
+  }
+
+  .hand-meta {
+    top: 67%;
+    font-size: 1.42cqw;
+    opacity: 0.82;
+    transform: rotate(-1deg);
+  }
+
+  .hand-meta.tiny {
+    top: 76%;
+    font-size: 1.08cqw;
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+  }
+
+  .vinyl.single .hand-title {
+    top: 13%;
+    font-size: 3.4cqw;
+  }
+
+  .vinyl.single .hand-side {
+    top: 58%;
+    font-size: 2.4cqw;
+  }
+
+  .vinyl.single .hand-meta {
+    top: 68%;
+    font-size: 1.5cqw;
+  }
+
+  .vinyl.single .stamp {
+    top: 10%;
+    font-size: 1.1cqw;
   }
 
   .spindle {

@@ -58,7 +58,8 @@ impl Db {
                  palette      TEXT NOT NULL,
                  format       TEXT NOT NULL,
                  sides        TEXT NOT NULL,
-                 folder       TEXT NOT NULL
+                 folder       TEXT NOT NULL,
+                 source       TEXT NOT NULL DEFAULT '\"release\"'
              );
              CREATE INDEX IF NOT EXISTS idx_albums_artist ON albums(album_artist COLLATE NOCASE);
              CREATE INDEX IF NOT EXISTS idx_albums_added ON albums(added_at DESC);
@@ -66,8 +67,20 @@ impl Db {
                  path     TEXT PRIMARY KEY,
                  added_at INTEGER NOT NULL
              );
-             PRAGMA user_version=1;",
+             PRAGMA user_version=2;",
         )?;
+
+        // First-version databases lack the source column; add it in place so the
+        // cached library does not have to be rescanned.
+        let mut stmt = self.conn.prepare("PRAGMA table_info(albums)")?;
+        let has_source = stmt
+            .query_map([], |row| row.get::<_, String>(1))?
+            .filter_map(Result::ok)
+            .any(|name| name == "source");
+        if !has_source {
+            self.conn
+                .execute("ALTER TABLE albums ADD COLUMN source TEXT NOT NULL DEFAULT '\"release\"'", [])?;
+        }
         Ok(())
     }
 
@@ -77,8 +90,8 @@ impl Db {
         {
             let mut insert = tx.prepare(
                 "INSERT INTO albums
-                 (id, title, album_artist, year, genre, label, added_at, cover, palette, format, sides, folder)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+                 (id, title, album_artist, year, genre, label, added_at, cover, palette, format, sides, folder, source)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
             )?;
             for album in albums {
                 insert.execute(params![
@@ -94,6 +107,7 @@ impl Db {
                     serde_json::to_string(&album.format)?,
                     serde_json::to_string(&album.sides)?,
                     album.folder,
+                    serde_json::to_string(&album.source)?,
                 ])?;
             }
         }
@@ -103,13 +117,14 @@ impl Db {
 
     pub fn load_albums(&self) -> Result<Vec<Album>, DbError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, title, album_artist, year, genre, label, added_at, cover, palette, format, sides, folder
+            "SELECT id, title, album_artist, year, genre, label, added_at, cover, palette, format, sides, folder, source
              FROM albums ORDER BY added_at DESC, album_artist COLLATE NOCASE",
         )?;
         let rows = stmt.query_map([], |row| {
             let palette: String = row.get(8)?;
             let format: String = row.get(9)?;
             let sides: String = row.get(10)?;
+            let source: String = row.get(12)?;
             Ok(Album {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -121,6 +136,7 @@ impl Db {
                 cover: row.get(7)?,
                 palette: serde_json::from_str(&palette).unwrap_or_else(|_| Palette::fallback()),
                 format: serde_json::from_str(&format).unwrap_or(super::model::DiscFormat::Unknown),
+                source: serde_json::from_str(&source).unwrap_or_default(),
                 sides: serde_json::from_str(&sides).unwrap_or_default(),
                 folder: row.get(11)?,
                 track_count: 0,
@@ -198,6 +214,7 @@ mod tests {
             cover: None,
             palette: Palette::fallback(),
             format: DiscFormat::Lp12,
+            source: crate::library::model::AlbumSource::Playlist,
             sides: vec![Side {
                 label: "A".into(),
                 rpm: Rpm::R33,
@@ -231,6 +248,10 @@ mod tests {
         assert_eq!(loaded[0].track_count, 1);
         assert!((loaded[0].duration - 150.5).abs() < 1e-9);
         assert_eq!(loaded[0].sides[0].rpm, Rpm::R33);
+        assert_eq!(
+            loaded[0].source,
+            crate::library::model::AlbumSource::Playlist
+        );
     }
 
     #[test]

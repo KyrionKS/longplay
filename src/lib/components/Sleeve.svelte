@@ -5,13 +5,17 @@
   let { album, onselect }: { album: Album; onselect: () => void } = $props();
 
   const cover = $derived(coverUrl(album));
+  const testPressing = $derived(album.source === "playlist");
+  const trackCount = $derived(album.sides.reduce((sum, side) => sum + side.tracks.length, 0));
 </script>
 
 <button
   class="sleeve"
+  class:test={testPressing}
   type="button"
   onclick={onselect}
   title={`${album.title} — ${album.albumArtist}`}
+  data-album-id={album.id}
   style:--vinyl={album.palette.vinyl}
   style:--light={album.palette.vinylLight}
   style:--label={album.palette.label}
@@ -20,7 +24,15 @@
   <span class="paper-edge" aria-hidden="true"></span>
 
   <span class="art">
-    {#if cover}
+    {#if testPressing}
+      <span class="test-cover">
+        <span class="tp-stamp">Test Pressing</span>
+        <span class="tp-hand">{album.title}</span>
+        <span class="tp-meta">{album.albumArtist}</span>
+        <span class="tp-meta dim">{trackCount} Tracks · 33 1/3</span>
+        <span class="tp-line" aria-hidden="true"></span>
+      </span>
+    {:else if cover}
       <img src={cover} alt="" draggable="false" />
     {:else}
       <span class="fallback" style:color={album.palette.label}>
@@ -84,7 +96,9 @@
     position: absolute;
     inset: 1% -1.6% -1.6% 1%;
     border-radius: 1px;
-    background: linear-gradient(160deg, #efe6cf, #cbbc98);
+    background-color: #e6dcc2;
+    background-image: url("/textures/paper-soft.jpg");
+    background-size: 240px 240px;
     box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.35);
     z-index: 0;
   }
@@ -131,6 +145,63 @@
     font-size: 11px;
     font-style: italic;
     opacity: 0.8;
+  }
+
+  .test-cover {
+    position: absolute;
+    inset: 0;
+    padding: 9% 9% 10%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1.5%;
+    color: #23262e;
+    background-color: #efe7d2;
+    background-image: url("/textures/paper-soft.jpg");
+    background-size: 220px 220px;
+    background-blend-mode: multiply;
+    box-shadow: 0 0 0 1px rgba(80, 62, 36, 0.18) inset;
+  }
+
+  .tp-stamp {
+    align-self: flex-end;
+    margin-bottom: 4%;
+    padding: 0.35em 0.5em;
+    border: 1px solid rgba(150, 38, 38, 0.55);
+    border-radius: 1px;
+    color: rgba(150, 38, 38, 0.72);
+    font-family: var(--font-display);
+    font-size: 7px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transform: rotate(-9deg);
+  }
+
+  .tp-hand {
+    font-family: var(--font-hand);
+    font-size: 17px;
+    line-height: 1.02;
+    transform: rotate(-1.6deg);
+  }
+
+  .tp-meta {
+    font-family: var(--font-hand);
+    font-size: 10px;
+    opacity: 0.82;
+    transform: rotate(-1.2deg);
+  }
+
+  .tp-meta.dim {
+    opacity: 0.6;
+  }
+
+  .tp-line {
+    width: 62%;
+    height: 1px;
+    margin-top: 5%;
+    background: rgba(40, 42, 48, 0.28);
+    transform: rotate(-1.5deg);
   }
 
   .wear {
