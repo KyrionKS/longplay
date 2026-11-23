@@ -22,6 +22,7 @@ pub struct DspState {
     lowpass: [f32; 2],
     time: f64,
     was_playing: bool,
+    pre_roll: u64,
 }
 
 impl Default for DspState {
@@ -37,6 +38,7 @@ impl DspState {
             lowpass: [0.0; 2],
             time: 0.0,
             was_playing: false,
+            pre_roll: 0,
         }
     }
 }
@@ -49,6 +51,7 @@ pub struct Engine {
     rate: AtomicU32,
     volume: AtomicU32,
     character: AtomicU32,
+    needle_pre_roll: AtomicBool,
     track_index: AtomicU64,
     side_start: AtomicU64,
     retired: Mutex<Vec<Arc<TrackAudio>>>,
@@ -78,6 +81,7 @@ impl Engine {
             rate: AtomicU32::new(1.0f32.to_bits()),
             volume: AtomicU32::new(0.9f32.to_bits()),
             character: AtomicU32::new(0.3f32.to_bits()),
+            needle_pre_roll: AtomicBool::new(false),
             track_index: AtomicU64::new(0),
             side_start: AtomicU64::new(0.0f64.to_bits()),
             retired: Mutex::new(Vec::with_capacity(4)),
@@ -212,6 +216,11 @@ impl Engine {
         store_f32(&self.character, character.clamp(0.0, 1.0) as f32);
     }
 
+    /// The session enables this so the needle lands before the first note.
+    pub fn set_needle_pre_roll(&self, enabled: bool) {
+        self.needle_pre_roll.store(enabled, Ordering::Relaxed);
+    }
+
     pub fn character(&self) -> f32 {
         load_f32(&self.character)
     }
@@ -314,11 +323,6 @@ impl Engine {
             return;
         }
 
-        if !dsp.was_playing {
-            dsp.noise.trigger_drop();
-            dsp.was_playing = true;
-        }
-
         let device_rate = device_rate.max(1);
         let base_rate = f64::from(load_f32(&self.rate))
             * (f64::from(
@@ -330,6 +334,26 @@ impl Engine {
         let character = load_f32(&self.character);
         let volume = load_f32(&self.volume);
         let sample_rate = f64::from(device_rate);
+
+        if !dsp.was_playing {
+            let track_rate = current
+                .as_ref()
+                .map(|track| track.rate)
+                .unwrap_or(device_rate);
+            let at_side_start = self.position.load(Ordering::Relaxed) as f64
+                <= f64::from(track_rate) * 0.05;
+            if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) {
+                // Let the needle land and crackle before the first note. The
+                // track position stays put during this pre-roll.
+                dsp.pre_roll = u64::from(device_rate) * 4 / 5;
+                dsp.noise.trigger_surface(0.8);
+            } else {
+                dsp.pre_roll = 0;
+            }
+            dsp.noise.trigger_drop();
+            dsp.was_playing = true;
+        }
+
         let mut frame_out = [0.0f32; 2];
         let mut position = self.position.load(Ordering::Relaxed) as f64;
         let mut finished = false;
@@ -354,6 +378,15 @@ impl Engine {
             }
             if finished {
                 break;
+            }
+
+            if dsp.pre_roll > 0 {
+                let (noise_left, noise_right) = dsp.noise.process(character, device_rate, 1.0);
+                frame[0] = soft_clip(noise_left * volume);
+                frame[1] = soft_clip(noise_right * volume);
+                dsp.pre_roll -= 1;
+                dsp.time += 1.0 / sample_rate;
+                continue;
             }
 
             let Some(track) = current.as_ref() else {
@@ -696,5 +729,44 @@ mod tests {
         engine.stop();
         assert_eq!(engine.position_frames(), 0);
         assert!(!engine.is_playing());
+    }
+
+    #[test]
+    fn first_play_holds_the_track_during_the_needle_pre_roll() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track(1.0, 440.0, 0.5), 0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut out = vec![0.0; 4_800 * 2];
+        engine.process(&mut out, 48_000, &mut dsp);
+        assert_eq!(engine.position_frames(), 0, "music must wait for the needle");
+        assert!(
+            out.iter().any(|sample| sample.abs() > 1e-5),
+            "the pre-roll must not be silent"
+        );
+    }
+
+    #[test]
+    fn music_starts_after_the_needle_pre_roll() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track(2.0, 440.0, 0.5), 0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut out = vec![0.0; 48_000 * 2];
+        engine.process(&mut out, 48_000, &mut dsp);
+        assert!(engine.position_frames() > 0, "position advances after the drop");
+    }
+
+    #[test]
+    fn resume_mid_side_does_not_wait_for_the_needle() {
+        let engine = Engine::new();
+        engine.load_track(track(2.0, 440.0, 0.5), 0.5);
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut out = vec![0.0; 4_800 * 2];
+        engine.process(&mut out, 48_000, &mut dsp);
+        assert!(engine.position_seconds() > 0.55);
     }
 }

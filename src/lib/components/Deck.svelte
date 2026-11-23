@@ -12,6 +12,7 @@
     playback: PlaybackState | null;
     grooves: GrooveBand[];
     conceal?: boolean;
+    cuePhase?: "swing" | "lower" | null;
     onGeometry?: (geometry: { x: number; y: number; r: number }) => void;
     onSide: (index: number) => void;
     onToggle: () => void;
@@ -26,6 +27,7 @@
     playback,
     grooves,
     conceal = false,
+    cuePhase = null,
     onGeometry,
     onSide,
     onToggle,
@@ -120,11 +122,22 @@
     hoverTrackIndex !== null ? (side?.tracks[hoverTrackIndex] ?? null) : null,
   );
 
+  const cueTargetPhi = $derived.by(() => {
+    const first = grooves.find((band) => band.kind === "track");
+    const radius = first?.start ?? 146;
+    return PIVOT_ANGLE + Math.PI - thetaForRadius(radius, pivotDistance, armLength);
+  });
+
+  let armPlaced = $state(false);
+  const armLift = $derived(cuePhase === "swing" ? -6 : 0);
+
   const statePhi = $derived.by(() => {
     if (dragging) return manualPhi;
     if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
+    if (cuePhase) return cueTargetPhi;
     if (atEnd) return REST_PHI;
+    if (!armPlaced && !playing) return REST_PHI;
     return PIVOT_ANGLE + Math.PI - playback.armAngle;
   });
 
@@ -170,11 +183,18 @@
     album?.id;
     sideIndex;
     cueHold = null;
+    armPlaced = false;
+  });
+
+  $effect(() => {
+    if (playing) armPlaced = true;
+    if (atEnd) armPlaced = false;
+    if (cuePhase === "lower") armPlaced = true;
   });
 
   $effect(() => {
     const target = statePhi;
-    const speed = dragging ? 30 : 8;
+    const speed = dragging ? 30 : cuePhase ? 3.4 : 8;
     let frame = 0;
     let last = performance.now();
 
@@ -275,6 +295,7 @@
   function onPointerDown(event: PointerEvent) {
     if (!album || !side || !playback?.loaded || loading) return;
     dragging = true;
+    armPlaced = true;
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
     updateCue(event);
     void pausePlayback();
@@ -547,39 +568,41 @@
         />
 
         <!-- S-shaped tube -->
-        <path
-          d={armPath}
-          fill="none"
-          stroke="#0d0d0d"
-          stroke-width="16"
-          stroke-linecap="round"
-        />
-        <path
-          d={armPath}
-          fill="none"
-          stroke="#c9c9c9"
-          stroke-width="11"
-          stroke-linecap="round"
-        />
-        <path
-          d={armPath}
-          fill="none"
-          stroke="rgba(255,255,255,0.55)"
-          stroke-width="2"
-          stroke-linecap="round"
-        />
-
-        <!-- Aluminium collar before the headshell -->
-        <g transform={`translate(${shellRearX} ${shellRearY}) rotate(${shellPhiDeg})`}>
-          <rect
-            x={-armLengthPx * 0.016}
-            y={-armLengthPx * 0.019}
-            width={armLengthPx * 0.032}
-            height={armLengthPx * 0.038}
-            rx={armLengthPx * 0.014}
-            fill="url(#chrome)"
-            stroke="rgba(0,0,0,0.45)"
+        <g class="arm-front" style:transform={`translateY(${armLift}px)`}>
+          <path
+            d={armPath}
+            fill="none"
+            stroke="#0d0d0d"
+            stroke-width="16"
+            stroke-linecap="round"
           />
+          <path
+            d={armPath}
+            fill="none"
+            stroke="#c9c9c9"
+            stroke-width="11"
+            stroke-linecap="round"
+          />
+          <path
+            d={armPath}
+            fill="none"
+            stroke="rgba(255,255,255,0.55)"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+
+          <!-- Aluminium collar before the headshell -->
+          <g transform={`translate(${shellRearX} ${shellRearY}) rotate(${shellPhiDeg})`}>
+            <rect
+              x={-armLengthPx * 0.016}
+              y={-armLengthPx * 0.019}
+              width={armLengthPx * 0.032}
+              height={armLengthPx * 0.038}
+              rx={armLengthPx * 0.014}
+              fill="url(#chrome)"
+              stroke="rgba(0,0,0,0.45)"
+            />
+          </g>
         </g>
 
         <!-- Counterweight with knurled dial -->
@@ -626,6 +649,7 @@
         <circle cx={pivotX} cy={pivotY} r={Math.max(3, armLengthPx * 0.012)} fill="#0d0d0d" />
 
         <!-- Headshell with finger lift, stylus centred -->
+        <g class="arm-front" style:transform={`translateY(${armLift}px)`}>
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${shellPhiDeg})`}>
           <!-- headshell body, stylus at the front-centre -->
           <rect
@@ -683,6 +707,7 @@
           />
           <circle r={Math.max(3.4, armLengthPx * 0.013)} fill="rgba(0,0,0,0.35)" />
           <circle r={Math.max(1.9, armLengthPx * 0.0075)} fill="#f6f6f6" />
+        </g>
         </g>
       </g>
     </svg>
@@ -977,6 +1002,10 @@
     letter-spacing: 0.12em;
     color: rgba(239, 230, 207, 0.38);
     font-variant-numeric: tabular-nums;
+  }
+
+  .arm-front {
+    transition: transform 220ms ease;
   }
 
   .arm-layer {

@@ -57,14 +57,16 @@ Klick auf die Hülle oder `Leertaste` dreht sie um und zeigt die generierte Rüc
 mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
 
 **Auflegen:** Ein Klick auf eine Hülle hebt sie aus der Kiste, zieht die Platte heraus
-und legt sie auf den Teller; die Nadel steht danach bereit. Bei reduzierter Bewegung
-springt die Ansicht direkt zum aufgelegten Album.
+und legt sie auf den Teller; der Tonarm bleibt in der Ablage. Beim ersten `START`
+schwenkt er zur äußeren Rille, senkt sich ab, die Nadel landet hörbar mit einem kurzen
+Knistern, und erst danach beginnt die Musik. Bei reduzierter Bewegung entfällt der Flug.
 
 **Playlists:** `.m3u`/`.m3u8`-Dateien in den gescannten Ordnern werden als
-White-Label-Testpressung gepresst: handbeschriftetes Label, Papierhülle mit Stempel,
-„Promo · Not for Sale“ statt Barcode. Relative Pfade gelten ab dem Playlist-Ordner,
-fehlende Einträge erscheinen als Hinweis. Ein `#EXTINF`-Titel und seine Dauer haben
-Vorrang vor den Tags der Audiodatei.
+White-Label-Testpressung gepresst: handbeschriftetes Label, „Promo · Not for Sale“
+statt Barcode. Als Hüllenbild dient ein `cover.jpg`/`cover.png` neben der Playlist,
+sonst das Cover des ersten Tracks, sonst die Papier-Testpressung mit Stempel.
+Relative Pfade gelten ab dem Playlist-Ordner, fehlende Einträge erscheinen als Hinweis.
+Ein `#EXTINF`-Titel und seine Dauer haben Vorrang vor den Tags der Audiodatei.
 
 **Material:** Papierkanten und Ringwear an den Hüllen, Abrieb und Pressring am Label,
 Staub und feine Kratzer auf der Platte, ein wandernder Warp-Glanz und ein warmer

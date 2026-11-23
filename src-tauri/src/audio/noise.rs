@@ -10,6 +10,7 @@ pub struct VinylNoise {
     rumble_lp: f32,
     drop: f32,
     drop_phase: f32,
+    surface: f32,
 }
 
 impl VinylNoise {
@@ -22,6 +23,7 @@ impl VinylNoise {
             rumble_lp: 0.0,
             drop: 0.0,
             drop_phase: 0.0,
+            surface: 0.0,
         }
     }
 
@@ -40,6 +42,11 @@ impl VinylNoise {
         self.drop_phase = 0.0;
     }
 
+    /// Adds a short, denser crackle bed, as when the needle just touched down.
+    pub fn trigger_surface(&mut self, seconds: f32) {
+        self.surface = seconds.max(0.0);
+    }
+
     /// Returns one stereo noise frame. `character` is `0.0..=1.0`.
     pub fn process(&mut self, character: f32, rate: u32, platter: f32) -> (f32, f32) {
         if character <= 0.0 {
@@ -50,9 +57,18 @@ impl VinylNoise {
         let character = character.clamp(0.0, 1.0);
         let platter = platter.clamp(0.0, 1.0);
 
-        // ~8 crackles per minute.
-        if f64::from(self.next()) < 8.0 / (60.0 * rate) {
-            self.crackle = (0.15 + 0.85 * self.next()) * 0.10;
+        // ~8 crackles per minute in steady state; after the needle drops a
+        // short burst of ~22 crackles per second makes the touchdown audible.
+        let (density, amplitude) = if self.surface > 0.0 {
+            (22.0 / rate, 0.14)
+        } else {
+            (8.0 / (60.0 * rate), 0.10)
+        };
+        if f64::from(self.next()) < density {
+            self.crackle = (0.15 + 0.85 * self.next()) * amplitude;
+        }
+        if self.surface > 0.0 {
+            self.surface = (self.surface - 1.0 / rate as f32).max(0.0);
         }
 
         let mut crackle = 0.0;

@@ -67,12 +67,17 @@
       <div class="sleeve-inner">
         <div class="face front">
           {#if playlist}
-            <div class="test-front">
-              <span class="test-stamp">Test Pressing</span>
-              <span class="test-hand">{album.title}</span>
-              <span class="test-hand small">{album.albumArtist}</span>
-              <span class="test-note">{totalTracks} Tracks · {handRpm} RPM · {catalog}</span>
-            </div>
+            {#if cover}
+              <img src={cover} alt="" draggable="false" />
+              <span class="test-badge">Test Pressing</span>
+            {:else}
+              <div class="test-front">
+                <span class="test-stamp">Test Pressing</span>
+                <span class="test-hand">{album.title}</span>
+                <span class="test-hand small">{album.albumArtist}</span>
+                <span class="test-note">{totalTracks} Tracks · {handRpm} RPM · {catalog}</span>
+              </div>
+            {/if}
           {:else if cover}
             <img src={cover} alt="" draggable="false" />
           {:else}
@@ -285,6 +290,23 @@
     background-image: url("/textures/paper-soft.jpg");
     background-size: 420px 420px;
     background-blend-mode: multiply;
+  }
+
+  .test-badge {
+    position: absolute;
+    top: 5%;
+    right: 4%;
+    padding: 0.9vmin 1.4vmin;
+    border: 1px solid rgba(150, 38, 38, 0.62);
+    border-radius: 1px;
+    color: rgba(150, 38, 38, 0.82);
+    background: rgba(244, 238, 218, 0.75);
+    font-family: var(--font-display);
+    font-size: 1.8vmin;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
+    transform: rotate(-7deg);
   }
 
   .test-stamp {

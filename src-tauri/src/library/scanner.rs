@@ -296,6 +296,8 @@ fn build_playlist(path: &Path, covers: &Path) -> Result<(Album, Vec<String>), St
     let mut tracks = Vec::new();
     let mut warnings = Vec::new();
     let mut missing = 0usize;
+    let mut cover_bytes: Option<Vec<u8>> = None;
+    let mut track_folder_cover: Option<PathBuf> = None;
 
     for (index, entry) in playlist.entries.iter().enumerate() {
         let resolved = if entry.path.is_absolute() {
@@ -330,6 +332,13 @@ fn build_playlist(path: &Path, covers: &Path) -> Result<(Album, Vec<String>), St
             .and_then(|tags| tags.artist.clone().or_else(|| tags.album_artist.clone()))
             .unwrap_or_else(|| "Verschiedene Künstler".to_string());
 
+        if cover_bytes.is_none() {
+            cover_bytes = tags.as_ref().and_then(|tags| tags.picture.clone());
+        }
+        if track_folder_cover.is_none() {
+            track_folder_cover = resolved.parent().and_then(artwork::find_folder_cover);
+        }
+
         tracks.push(BuiltTrack {
             number: index as u32 + 1,
             title,
@@ -363,6 +372,11 @@ fn build_playlist(path: &Path, covers: &Path) -> Result<(Album, Vec<String>), St
         .map(|stem| stem.to_string_lossy().into_owned())
         .unwrap_or_else(|| "Playlist".to_string());
 
+    // A playlist has no artwork of its own: prefer a cover next to the list,
+    // then the first track's embedded picture, then that track's folder cover.
+    let folder_cover = artwork::find_folder_cover(&folder).or(track_folder_cover);
+    let cover_source = artwork::bytes(cover_bytes.as_deref(), folder_cover.as_deref());
+
     let album = assemble(
         AlbumMeta {
             title,
@@ -375,7 +389,7 @@ fn build_playlist(path: &Path, covers: &Path) -> Result<(Album, Vec<String>), St
             source: AlbumSource::Playlist,
         },
         tracks,
-        None,
+        cover_source,
         covers,
     );
 
@@ -968,6 +982,10 @@ mod scan_tests {
         write_wav(&folder.join("two.wav"), 7.0);
         write_wav(&folder.join("three.wav"), 9.0);
 
+        image::RgbImage::from_pixel(64, 64, image::Rgb([180, 90, 60]))
+            .save(root.join("cover.png"))
+            .unwrap();
+
         fs::write(
             root.join("Late Night.m3u"),
             "#EXTM3U\n\
@@ -1002,6 +1020,7 @@ mod scan_tests {
         assert!(tracks.iter().all(|track| track.artist == "Verschiedene Künstler"));
         assert!((tracks[0].duration - 5.0).abs() < 0.2);
         assert!((tracks[1].duration - 7.0).abs() < 0.2);
+        assert!(album.cover.is_some(), "playlist uses the folder cover");
 
         fs::remove_dir_all(&root).ok();
     }

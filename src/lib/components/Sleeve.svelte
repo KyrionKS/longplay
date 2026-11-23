@@ -25,13 +25,18 @@
 
   <span class="art">
     {#if testPressing}
-      <span class="test-cover">
-        <span class="tp-stamp">Test Pressing</span>
-        <span class="tp-hand">{album.title}</span>
-        <span class="tp-meta">{album.albumArtist}</span>
-        <span class="tp-meta dim">{trackCount} Tracks · 33 1/3</span>
-        <span class="tp-line" aria-hidden="true"></span>
-      </span>
+      {#if cover}
+        <img src={cover} alt="" draggable="false" />
+        <span class="tp-badge">Test Pressing</span>
+      {:else}
+        <span class="test-cover">
+          <span class="tp-stamp">Test Pressing</span>
+          <span class="tp-hand">{album.title}</span>
+          <span class="tp-meta">{album.albumArtist}</span>
+          <span class="tp-meta dim">{trackCount} Tracks · 33 1/3</span>
+          <span class="tp-line" aria-hidden="true"></span>
+        </span>
+      {/if}
     {:else if cover}
       <img src={cover} alt="" draggable="false" />
     {:else}
@@ -202,6 +207,24 @@
     margin-top: 5%;
     background: rgba(40, 42, 48, 0.28);
     transform: rotate(-1.5deg);
+  }
+
+  .tp-badge {
+    position: absolute;
+    top: 7%;
+    right: 6%;
+    padding: 0.45em 0.6em;
+    border: 1px solid rgba(160, 40, 40, 0.62);
+    border-radius: 1px;
+    color: rgba(160, 40, 40, 0.8);
+    background: rgba(244, 238, 218, 0.72);
+    font-family: var(--font-display);
+    font-size: 7px;
+    letter-spacing: 0.14em;
+    line-height: 1;
+    text-transform: uppercase;
+    transform: rotate(-7deg);
+    white-space: nowrap;
   }
 
   .wear {

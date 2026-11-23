@@ -77,7 +77,7 @@ impl Default for Session {
 
 impl Session {
     pub fn new() -> Self {
-        Self {
+        let session = Self {
             engine: Arc::new(Engine::new()),
             token: AtomicU64::new(0),
             loading: AtomicBool::new(false),
@@ -92,7 +92,9 @@ impl Session {
             side_index: AtomicU32::new(0),
             format: Mutex::new(DiscFormat::Lp12),
             prefetching: AtomicBool::new(false),
-        }
+        };
+        session.engine.set_needle_pre_roll(true);
+        session
     }
 
     pub fn start_output(self: &Arc<Self>) {

@@ -20,6 +20,8 @@
   let sideIndex = $state(0);
   let gatefoldOpen = $state(false);
   let sleeveFlipped = $state(false);
+  let cuePhase = $state<"swing" | "lower" | null>(null);
+  let cueToken = 0;
   let platter = $state<{ x: number; y: number; r: number } | null>(null);
   let flight = $state<{
     album: Album;
@@ -156,6 +158,7 @@
 
   function select(album: Album) {
     if (flight) return;
+    cancelCue();
     const element = document.querySelector<HTMLElement>(`[data-album-id="${album.id}"]`);
     const rect = element?.getBoundingClientRect();
     selectedId = album.id;
@@ -182,14 +185,39 @@
 
   function changeSide(index: number) {
     if (!selected) return;
+    cancelCue();
     const wasPlaying = !!playback.state?.playing;
     sideIndex = index;
     void loadSide(selected.id, index, wasPlaying);
   }
 
-  function toggle() {
+  function cancelCue() {
+    cueToken += 1;
+    cuePhase = null;
+  }
+
+  async function toggle() {
     if (!selected) return;
-    void togglePlayback();
+    const state = playback.state;
+    if (!state?.loaded || state.loading || cuePhase) return;
+    if (state.playing) {
+      void togglePlayback();
+      return;
+    }
+
+    const atEnd = state.duration > 0 && state.position >= state.duration - 0.08;
+    const atStart = state.position <= 0.05;
+    if (atStart || atEnd) {
+      const token = ++cueToken;
+      cuePhase = "swing";
+      await new Promise((resolve) => setTimeout(resolve, 720));
+      if (token !== cueToken) return;
+      cuePhase = "lower";
+      await new Promise((resolve) => setTimeout(resolve, 240));
+      if (token !== cueToken) return;
+      cuePhase = null;
+    }
+    await togglePlayback();
   }
 
   function changeRpm(rpm: number) {
@@ -225,6 +253,7 @@
       playback={playback.state}
       grooves={loadedState?.grooves ?? []}
       conceal={!!flight}
+      cuePhase={cuePhase}
       onGeometry={(geometry) => (platter = geometry)}
       onSide={changeSide}
       onToggle={toggle}

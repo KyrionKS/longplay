@@ -117,11 +117,16 @@
   >
     <div class="sleeve-art">
       {#if playlist}
-        <div class="test-art">
-          <span class="test-stamp">Test Pressing</span>
-          <span class="test-hand">{album.title}</span>
-          <span class="test-small">{album.albumArtist}</span>
-        </div>
+        {#if cover}
+          <img src={cover} alt="" draggable="false" />
+          <span class="cover-stamp">Test Pressing</span>
+        {:else}
+          <div class="test-art">
+            <span class="test-stamp">Test Pressing</span>
+            <span class="test-hand">{album.title}</span>
+            <span class="test-small">{album.albumArtist}</span>
+          </div>
+        {/if}
       {:else if cover}
         <img src={cover} alt="" draggable="false" />
       {:else}
@@ -185,6 +190,21 @@
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+
+  .cover-stamp {
+    position: absolute;
+    top: 6%;
+    right: 5%;
+    padding: 0.5% 1%;
+    border: 1px solid rgba(150, 38, 38, 0.65);
+    color: rgba(150, 38, 38, 0.85);
+    background: rgba(244, 238, 218, 0.75);
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transform: rotate(-7deg);
   }
 
   .paper {

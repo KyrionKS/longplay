@@ -302,9 +302,9 @@ Seiten- und Gesamtspielzeit, Katalog-Nummer und Barcode. Kein erfundener Liner-T
 `.m3u`/`.m3u8` werden beim Scan als zusätzliche Alben gepresst. Pfade gelten relativ
 zum Playlist-Ordner, `#EXTINF`-Titel und -Dauer haben Vorrang, fehlende Dateien werden
 als Scan-Hinweis gemeldet. Eine Playlist ist immer eine 12″-White-Label-Testpressung:
-Papierhülle mit Stempel, handgeschriebene Anmutung (gebündelte Schrift „Caveat“),
-„Promo · Not for Sale“ statt Barcode, Pausen 0. Ein `A`/`B`-Schnitt nach Spielzeit
-bleibt wie bei LPs.
+handgeschriebenes Label (gebündelte Schrift „Caveat“), „Promo · Not for Sale“ statt
+Barcode, Pausen 0. Hüllenbild: Cover neben der Playlist, sonst Cover des ersten Tracks,
+sonst Papier-Testpressung mit Stempel. Ein `A`/`B`-Schnitt nach Spielzeit bleibt.
 
 ### Vinyl-Ästhetik (Vorschlag)
 
@@ -417,6 +417,7 @@ Der Interaktionskern ist erreicht; die Material- und Lichtpolitur folgt im Ästh
 - [x] Playlists als White-Label-Testpressung mit handbeschriftetem Label
 - [x] Echte Holz-/Metall-/Papier-Texturen als lokale Bitmaps
 - [x] Hüllen-Animation: Sleeve hebt sich, Platte gleitet auf den Teller
+- [x] Start-Sequenz: Arm schwenkt aus der Ablage, Nadel senkt sich, Drop/Knistern vor der Musik
 - [ ] Liner-Notizen, Locked-Groove-Thump, vollständiges Reduced Motion
 
 **Abnahme:** Vergleich mit Referenz-Screenshots, 60 fps (Frame-Zeiten gemessen).
