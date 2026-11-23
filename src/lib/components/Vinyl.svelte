@@ -73,8 +73,8 @@
           context.stroke();
         }
         for (const [edge, alpha] of [
-          [outer, 0.2],
-          [inner, 0.14],
+          [outer, 0.26],
+          [inner, 0.1],
         ] as const) {
           context.beginPath();
           context.arc(center, center, edge, 0, tau);
@@ -83,12 +83,12 @@
           context.stroke();
         }
       } else if (band.kind === "gap") {
-        // The land is a quiet band; the track's own bright edge marks the
-        // actual start of the next song.
+        // The land is almost invisible; the bright edge of the following
+        // track marks the actual start of the song.
         context.beginPath();
         context.arc(center, center, (outer + inner) / 2, 0, tau);
-        context.strokeStyle = "rgba(0,0,0,0.16)";
-        context.lineWidth = Math.max(1, bandWidth);
+        context.strokeStyle = "rgba(0,0,0,0.05)";
+        context.lineWidth = Math.max(0.8, bandWidth);
         context.stroke();
       } else {
         for (let radius = outer; radius > inner; radius -= 2.4) {

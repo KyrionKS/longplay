@@ -464,3 +464,37 @@ libayatana-appindicator3-dev libasound2-dev` (letzteres erst ab Phase 2).
 - Fehler mit `thiserror`, an der IPC-Grenze in `{ code, message }` übersetzen.
 - Beträge in Sekunden als `f64`, Sample-Positionen als `u64`, Winkel in Radiant.
 - Jede Phase endet mit grünen Tests und einem Commit.
+
+## 16. Offene Baustelle: Trackgrenzen auf der Rille
+
+**Symptom:** Die sichtbaren Rillengrenzen zwischen Songs wirken gegenüber den
+tatsächlichen Songwechseln verschoben („zu früh“).
+
+**Bereits geprüft:**
+
+- Canvas, Tonarm und Backend benutzen denselben Plattenradius (0,93 × Teller).
+- Test `track_bands_start_exactly_at_the_audio_tracks`: Jedes Track-Band beginnt
+  und endet exakt zu den Audio-Track-Zeiten inklusive Pregaps.
+- CUE: Ein Track endet am nächsten `INDEX 00`; der Pregap wird nicht doppelt
+  gezählt.
+- Rescan über „Aktualisieren“ im Footer.
+- Länder sind fast unsichtbar; die helle Kante am Bandanfang markiert den
+  tatsächlichen Songstart.
+
+**Offene Ursachen:**
+
+1. **Format-Heuristik:** 2-Track-Alben ≤ 8 min gelten als 7″. Ein 2-Track-12″-EP
+   würde dadurch auf einer 7″-Platte gezeichnet. Nötig: Override pro Album oder
+   `RELEASETYPE`/`MEDIA`-Tags auslesen.
+2. **Dauerquelle:** Tags bei Einzeldateien, `INDEX 00/01` bei CUE. Weichen die
+   Metadaten von der dekodierten Länge ab, verschieben sich alle Bänder. Beim
+   Laden die dekodierte Länge gegen die Metadaten prüfen.
+3. **Wahrnehmung des Lands:** Das Land ist die Pause vor dem Song; der Song
+   beginnt an seiner Innenkante. Die Darstellung zeigt die Songstart-Kante hell.
+4. **Reales Pressing:** Die Rillenlage hängt vom Schnitt (Pitch/Land) ab und ist
+   ohne Disc-ID nicht reproduzierbar.
+
+**Nächste Schritte:** Diagnose-Overlay (Track, Startzeit, Radius pro Band),
+LP/7″-Override pro Album, optional `RELEASETYPE`/`MEDIA` aus Tags.
+
+GitHub-Issue: https://github.com/KyrionKS/longplay/issues/1

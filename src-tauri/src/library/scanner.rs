@@ -429,7 +429,10 @@ fn assemble(
     }
 
     let total: f64 = tracks.iter().map(BuiltTrack::span).sum();
-    let format = if tracks.len() <= 2 && total <= 600.0 {
+    // Only clearly short two-track releases are treated as 7" singles. A
+    // two-track 12" EP would otherwise be drawn on a 7" record. Real format
+    // tags are the long-term fix (see PLAN.md, open issue).
+    let format = if tracks.len() <= 2 && total <= 480.0 {
         DiscFormat::Single7
     } else {
         DiscFormat::Lp12
