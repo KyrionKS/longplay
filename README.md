@@ -44,8 +44,9 @@ npm install
 npm run tauri dev
 ```
 
-Bedienung: Album anklicken legt es auf, `START/STOP` startet, die Tabs `A`/`B`
-wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
+Bedienung: Album anklicken (oder `1`–`9` für die Alben der aktuellen Seite) legt es auf,
+`START/STOP` bzw. `Leertaste` startet, die Tabs `A`/`B` wechseln die Seite, `33`/`45`
+ändern die Drehzahl (und damit Tonhöhe und Tempo).
 Auf die Platte ziehen setzt die Nadel an der Stelle ab; beim Überfahren zeigt ein
 kleines Etikett den Track unter dem Zeiger. Beim Cueen in einen anderen Track bleibt
 die Nadel sichtbar auf der Platte, während der Track nachlädt; der vorgeladene nächste

@@ -92,6 +92,12 @@
         event.preventDefault();
         toggle();
       }
+      const digit = Number(event.key);
+      if (digit >= 1 && digit <= 9) {
+        event.preventDefault();
+        const album = pageAlbums[digit - 1];
+        if (album) select(album);
+      }
     };
     window.addEventListener("keydown", onKey);
 

@@ -303,7 +303,9 @@ Pausen 0.
 
 Priorisiert nach Wirkung, nicht nach Aufwand:
 
-1. **Tonarm in der Rille:** Winkel folgt der Wiedergabe, Nadel sitzt sichtbar im Band.
+1. **Tonarm in der Rille:** S-förmiger Tonarm (SL-1200/EPA-120, SME 3009, Jelco SA50 als
+   Referenz) mit Gimbal-Gehäuse, Gegengewicht, Cue-Hebel, Antiskate und Armablage; Winkel
+   folgt der Wiedergabe, Nadel sitzt sichtbar im Band.
    Echte Plattenmaße: 12″ 302 mm, Label 100 mm, Musik 146→60 mm, Lead-in 5 mm,
    Auslauf bis 54 mm; 7″ 175 mm, Label 86 mm, Musik 84→45 mm. Zwischen den Tracks
    liegt ein 1,6–1,8 mm breites Land.

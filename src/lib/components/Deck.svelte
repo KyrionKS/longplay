@@ -178,7 +178,7 @@
   const stylusY = $derived(pivotY + armLengthPx * Math.sin(armPhi));
   const phiDeg = $derived((armPhi * 180) / Math.PI);
   // The headshell is offset against the arm axis; the stylus sits in its middle.
-  const shellPhi = $derived(armPhi + (20 * Math.PI) / 180);
+  const shellPhi = $derived(armPhi + (24 * Math.PI) / 180);
   const shellPhiDeg = $derived((shellPhi * 180) / Math.PI);
   const shellRearX = $derived(
     stylusX - Math.cos(shellPhi) * armLengthPx * 0.032,
@@ -195,11 +195,11 @@
   );
   const tubePerpX = $derived(-tubeChordY / tubeLength);
   const tubePerpY = $derived(tubeChordX / tubeLength);
-  const sBend = $derived(armLengthPx * 0.06);
-  const control1X = $derived(pivotX + tubeChordX * 0.3 + tubePerpX * sBend);
-  const control1Y = $derived(pivotY + tubeChordY * 0.3 + tubePerpY * sBend);
-  const control2X = $derived(pivotX + tubeChordX * 0.7 - tubePerpX * sBend);
-  const control2Y = $derived(pivotY + tubeChordY * 0.7 - tubePerpY * sBend);
+  const sBend = $derived(armLengthPx * 0.13);
+  const control1X = $derived(pivotX + tubeChordX * 0.18 + tubePerpX * sBend);
+  const control1Y = $derived(pivotY + tubeChordY * 0.18 + tubePerpY * sBend);
+  const control2X = $derived(pivotX + tubeChordX * 0.55 - tubePerpX * sBend * 0.28);
+  const control2Y = $derived(pivotY + tubeChordY * 0.55 - tubePerpY * sBend * 0.28);
   const armPath = $derived(
     `M ${pivotX} ${pivotY} C ${control1X} ${control1Y} ${control2X} ${control2Y} ${shellRearX} ${shellRearY}`,
   );
@@ -416,15 +416,22 @@
           <stop offset="100%" stop-color="#5a5a5a" />
         </linearGradient>
         <linearGradient id="weight" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#3d3d3d" />
-          <stop offset="30%" stop-color="#b8b8b8" />
-          <stop offset="70%" stop-color="#6c6c6c" />
-          <stop offset="100%" stop-color="#303030" />
+          <stop offset="0%" stop-color="#0f0f0f" />
+          <stop offset="26%" stop-color="#5c5c5c" />
+          <stop offset="55%" stop-color="#202020" />
+          <stop offset="82%" stop-color="#6f6f6f" />
+          <stop offset="100%" stop-color="#111111" />
+        </linearGradient>
+        <linearGradient id="weightRing" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#6a6a6a" />
+          <stop offset="35%" stop-color="#e2e2e2" />
+          <stop offset="70%" stop-color="#8a8a8a" />
+          <stop offset="100%" stop-color="#4a4a4a" />
         </linearGradient>
         <radialGradient id="base" cx="38%" cy="30%" r="70%">
-          <stop offset="0%" stop-color="#9a9a9a" />
-          <stop offset="55%" stop-color="#4e4e4e" />
-          <stop offset="100%" stop-color="#232323" />
+          <stop offset="0%" stop-color="#6f6f6f" />
+          <stop offset="55%" stop-color="#2f2f2f" />
+          <stop offset="100%" stop-color="#141414" />
         </radialGradient>
         <filter id="armShadow" x="-30%" y="-20%" width="170%" height="150%">
           <feDropShadow dx="4" dy="7" stdDeviation="6" flood-color="#000" flood-opacity="0.55" />
@@ -452,26 +459,42 @@
 
         <!-- Arm rest -->
         <g transform={`translate(${restX} ${restY})`}>
-          <rect x="-3.5" y="0" width="7" height={armLengthPx * 0.075} rx="2" fill="#242424" />
+          <rect x="-4" y="-2" width="8" height={armLengthPx * 0.06} rx="2" fill="#1f1f1f" />
           <path
-            d={`M ${-armLengthPx * 0.03} ${-armLengthPx * 0.012} L 0 0 L ${armLengthPx * 0.03} ${-armLengthPx * 0.012}`}
+            d={`M ${-armLengthPx * 0.022} ${-armLengthPx * 0.004} Q 0 ${armLengthPx * 0.018} ${armLengthPx * 0.022} ${-armLengthPx * 0.004}`}
             fill="none"
-            stroke="#2f2f2f"
-            stroke-width="5"
+            stroke="#2a2a2a"
+            stroke-width="4"
             stroke-linecap="round"
           />
         </g>
 
         <!-- Cue lever and anti-skate -->
         <g>
-          <circle cx={pivotX - armLengthPx * 0.12} cy={pivotY + armLengthPx * 0.1} r={armLengthPx * 0.03} fill="#242424" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" />
+          <circle cx={pivotX - armLengthPx * 0.12} cy={pivotY + armLengthPx * 0.1} r={armLengthPx * 0.03} fill="#181818" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" />
+          <line
+            x1={pivotX - armLengthPx * 0.12}
+            y1={pivotY + armLengthPx * 0.1}
+            x2={pivotX - armLengthPx * 0.12}
+            y2={pivotY + armLengthPx * 0.075}
+            stroke="rgba(255,255,255,0.5)"
+            stroke-width="1.6"
+          />
           <path
-            d={`M ${pivotX + armLengthPx * 0.06} ${pivotY + armLengthPx * 0.1} L ${pivotX + armLengthPx * 0.12} ${pivotY + armLengthPx * 0.17}`}
-            stroke="#9a9a9a"
-            stroke-width="4"
+            d={`M ${pivotX + armLengthPx * 0.06} ${pivotY + armLengthPx * 0.1} L ${pivotX + armLengthPx * 0.115} ${pivotY + armLengthPx * 0.165}`}
+            stroke="#bdbdbd"
+            stroke-width="3.5"
             stroke-linecap="round"
           />
-          <circle cx={pivotX + armLengthPx * 0.12} cy={pivotY + armLengthPx * 0.17} r={armLengthPx * 0.018} fill="#1a1a1a" />
+          <rect
+            x={pivotX + armLengthPx * 0.1}
+            y={pivotY + armLengthPx * 0.15}
+            width={armLengthPx * 0.045}
+            height={armLengthPx * 0.02}
+            rx={armLengthPx * 0.01}
+            fill="#111"
+            transform={`rotate(32 ${pivotX + armLengthPx * 0.12} ${pivotY + armLengthPx * 0.16})`}
+          />
         </g>
 
         <!-- Straight rear stub -->
@@ -530,9 +553,17 @@
             fill="none"
             stroke="rgba(0,0,0,0.5)"
           />
-          <line x1={-armLengthPx * 0.05} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.05} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.35)" stroke-width="1.4" />
-          <line x1={-armLengthPx * 0.03} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.03} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.28)" stroke-width="1.2" />
-          <line x1={-armLengthPx * 0.01} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.01} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.22)" stroke-width="1" />
+          <rect
+            x={armLengthPx * 0.075}
+            y={-armLengthPx * 0.048}
+            width={armLengthPx * 0.014}
+            height={armLengthPx * 0.096}
+            rx="2"
+            fill="url(#weightRing)"
+          />
+          <line x1={-armLengthPx * 0.05} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.05} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.5)" stroke-width="1.4" />
+          <line x1={-armLengthPx * 0.03} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.03} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.4)" stroke-width="1.2" />
+          <line x1={-armLengthPx * 0.01} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.01} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.3)" stroke-width="1" />
         </g>
 
         <!-- Pivot -->
@@ -548,32 +579,44 @@
 
         <!-- Headshell with finger lift, stylus centred -->
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${shellPhiDeg})`}>
+          <!-- wire finger lift -->
           <path
-            d={`M ${-armLengthPx * 0.004} ${-armLengthPx * 0.026} Q ${armLengthPx * 0.02} ${-armLengthPx * 0.05} ${armLengthPx * 0.036} ${-armLengthPx * 0.022}`}
+            d={`M ${-armLengthPx * 0.02} ${-armLengthPx * 0.03} Q ${armLengthPx * 0.005} ${-armLengthPx * 0.058} ${armLengthPx * 0.04} ${-armLengthPx * 0.03}`}
             fill="none"
-            stroke="#cfcfcf"
-            stroke-width="3"
+            stroke="#d8d8d8"
+            stroke-width="2.6"
             stroke-linecap="round"
           />
+          <!-- headshell body with lightening holes -->
           <rect
-            x={-armLengthPx * 0.03}
-            y={-armLengthPx * 0.022}
-            width={armLengthPx * 0.06}
-            height={armLengthPx * 0.044}
-            rx="3"
-            fill="#1c1c1c"
-            stroke="rgba(255,255,255,0.12)"
+            x={-armLengthPx * 0.065}
+            y={-armLengthPx * 0.026}
+            width={armLengthPx * 0.13}
+            height={armLengthPx * 0.052}
+            rx="4"
+            fill="#161616"
+            stroke="rgba(255,255,255,0.14)"
           />
+          <ellipse cx={-armLengthPx * 0.045} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <ellipse cx={armLengthPx * 0.045} cy="0" rx={armLengthPx * 0.012} ry={armLengthPx * 0.008} fill="#050505" stroke="rgba(255,255,255,0.1)" />
+          <!-- cartridge, stylus centred -->
           <rect
-            x={-armLengthPx * 0.018}
-            y={-armLengthPx * 0.016}
-            width={armLengthPx * 0.036}
-            height={armLengthPx * 0.032}
+            x={-armLengthPx * 0.02}
+            y={-armLengthPx * 0.017}
+            width={armLengthPx * 0.04}
+            height={armLengthPx * 0.034}
             rx="2"
             fill="#b5342a"
           />
-          <circle r={Math.max(3.2, armLengthPx * 0.012)} fill="rgba(0,0,0,0.32)" />
-          <circle r={Math.max(1.8, armLengthPx * 0.007)} fill="#f4f4f4" />
+          <rect
+            x={-armLengthPx * 0.007}
+            y={-armLengthPx * 0.006}
+            width={armLengthPx * 0.014}
+            height={armLengthPx * 0.012}
+            fill="#d8b45a"
+          />
+          <circle r={Math.max(3.4, armLengthPx * 0.013)} fill="rgba(0,0,0,0.35)" />
+          <circle r={Math.max(1.9, armLengthPx * 0.0075)} fill="#f6f6f6" />
         </g>
       </g>
     </svg>
