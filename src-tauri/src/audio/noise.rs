@@ -10,6 +10,7 @@ pub struct VinylNoise {
     rumble_lp: f32,
     drop: f32,
     drop_phase: f32,
+    tick: f32,
     surface: f32,
 }
 
@@ -23,6 +24,7 @@ impl VinylNoise {
             rumble_lp: 0.0,
             drop: 0.0,
             drop_phase: 0.0,
+            tick: 0.0,
             surface: 0.0,
         }
     }
@@ -40,6 +42,7 @@ impl VinylNoise {
     pub fn trigger_drop(&mut self) {
         self.drop = 1.0;
         self.drop_phase = 0.0;
+        self.tick = 1.0;
     }
 
     /// Adds a short, denser crackle bed, as when the needle just touched down.
@@ -60,7 +63,7 @@ impl VinylNoise {
         // ~8 crackles per minute in steady state; after the needle drops a
         // short burst of ~22 crackles per second makes the touchdown audible.
         let (density, amplitude) = if self.surface > 0.0 {
-            (22.0 / rate, 0.14)
+            (28.0 / rate, 0.26)
         } else {
             (8.0 / (60.0 * rate), 0.10)
         };
@@ -87,12 +90,18 @@ impl VinylNoise {
 
         let mut drop = 0.0;
         if self.drop > 1e-4 {
-            drop = (self.drop_phase * TAU).sin() * self.drop * 0.35;
+            drop = (self.drop_phase * TAU).sin() * self.drop * 0.55;
             self.drop_phase = (self.drop_phase + 55.0 / rate as f32) % 1.0;
             self.drop *= 0.9995;
         }
 
-        let signal = (crackle + rumble + drop) * character;
+        let mut tick = 0.0;
+        if self.tick > 1e-4 {
+            tick = (self.next() * 2.0 - 1.0) * self.tick * 0.18;
+            self.tick *= 0.985;
+        }
+
+        let signal = (crackle + rumble + drop + tick) * character;
         (signal, signal * 0.85)
     }
 }

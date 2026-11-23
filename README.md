@@ -56,10 +56,10 @@ Track springt sofort. `Leertaste` startet und stoppt.
 Klick auf die Hülle oder `Leertaste` dreht sie um und zeigt die generierte Rückseite
 mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
 
-**Auflegen:** Ein Klick auf eine Hülle hebt sie aus der Kiste, zieht die Platte heraus
-und legt sie auf den Teller; der Tonarm bleibt in der Ablage. Beim ersten `START`
-schwenkt er zur äußeren Rille, senkt sich ab, die Nadel landet hörbar mit einem kurzen
-Knistern, und erst danach beginnt die Musik. Bei reduzierter Bewegung entfällt der Flug.
+**Auflegen:** Ein Klick auf eine Hülle legt die Platte mit dem kurzen Auflege-Übergang
+auf den Teller; der Tonarm bleibt in der Ablage. Beim ersten `START` schwenkt er in
+Ruhe zur äußeren Rille (~1,4 s), senkt sich ab (~0,5 s), die Nadel landet hörbar mit
+einem Drop und rund 1,6 s Knistern — erst danach beginnt die Musik.
 
 **Playlists:** `.m3u`/`.m3u8`-Dateien in den gescannten Ordnern werden als
 White-Label-Testpressung gepresst: handbeschriftetes Label, „Promo · Not for Sale“
@@ -68,7 +68,7 @@ sonst das Cover des ersten Tracks, sonst die Papier-Testpressung mit Stempel.
 Relative Pfade gelten ab dem Playlist-Ordner, fehlende Einträge erscheinen als Hinweis.
 Ein `#EXTINF`-Titel und seine Dauer haben Vorrang vor den Tags der Audiodatei.
 
-**Material:** Papierkanten und Ringwear an den Hüllen, Abrieb und Pressring am Label,
+**Material:** Papierstruktur und Ringwear an den Hüllen, Abrieb und Pressring am Label,
 Staub und feine Kratzer auf der Platte, ein wandernder Warp-Glanz und ein warmer
 Lichtkegel über der Kiste. Holz, gebürstetes Metall und Papier liegen als lokale
 Bitmaps in `static/textures/`; Verschleiß, Licht und Staub bleiben prozedural.

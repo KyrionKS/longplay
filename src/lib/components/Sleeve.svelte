@@ -21,7 +21,6 @@
   style:--label={album.palette.label}
 >
   <span class="disc" aria-hidden="true"></span>
-  <span class="paper-edge" aria-hidden="true"></span>
 
   <span class="art">
     {#if testPressing}
@@ -95,17 +94,6 @@
     box-shadow:
       0 2px 6px rgba(0, 0, 0, 0.6),
       inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  }
-
-  .paper-edge {
-    position: absolute;
-    inset: 1% -1.6% -1.6% 1%;
-    border-radius: 1px;
-    background-color: #e6dcc2;
-    background-image: url("/textures/paper-soft.jpg");
-    background-size: 240px 240px;
-    box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.35);
-    z-index: 0;
   }
 
   .art {

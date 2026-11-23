@@ -11,9 +11,7 @@
     sideIndex: number;
     playback: PlaybackState | null;
     grooves: GrooveBand[];
-    conceal?: boolean;
     cuePhase?: "swing" | "lower" | null;
-    onGeometry?: (geometry: { x: number; y: number; r: number }) => void;
     onSide: (index: number) => void;
     onToggle: () => void;
     onRpm: (rpm: number) => void;
@@ -26,9 +24,7 @@
     sideIndex,
     playback,
     grooves,
-    conceal = false,
     cuePhase = null,
-    onGeometry,
     onSide,
     onToggle,
     onRpm,
@@ -70,11 +66,6 @@
       centerX = platterRect.left - stageRect.left + platterRect.width / 2;
       centerY = platterRect.top - stageRect.top + platterRect.height / 2;
       platterRadius = platterRect.width / 2;
-      onGeometry?.({
-        x: stageRect.left + centerX,
-        y: stageRect.top + centerY,
-        r: platterRadius * RECORD_RADIUS_FACTOR,
-      });
     };
 
     measure();
@@ -370,11 +361,9 @@
           </svg>
 
           {#if album && side}
-            <div class="record-slot" class:concealed={conceal}>
-              {#key `${album.id}:${side.label}`}
-                <Vinyl {album} {side} {grooves} />
-              {/key}
-            </div>
+            {#key `${album.id}:${side.label}`}
+              <Vinyl {album} {side} {grooves} />
+            {/key}
           {:else}
             <div class="mat"></div>
             <div class="spindle"></div>
@@ -845,15 +834,6 @@
     inset: 0;
     border-radius: 50%;
     will-change: transform;
-  }
-
-  .record-slot {
-    position: absolute;
-    inset: 0;
-  }
-
-  .record-slot.concealed {
-    visibility: hidden;
   }
 
   .strobe {

@@ -325,8 +325,8 @@ Priorisiert nach Wirkung, nicht nach Aufwand:
    die mit der Drehung wandert.
 5. **Licht:** ein beweglicher Glanzstreifen, Staub im Lichtkegel, weicher Schatten
    unter dem Arm.
-6. **Hülle → Teller:** Sleeve hebt sich, Platte gleitet heraus und sinkt auf den Teller.
-   Umgesetzt als Overlay-Flug; bei reduzierter Bewegung entfällt er.
+6. **Hülle → Teller:** bewusst verworfen. Die Platte erscheint mit dem kurzen
+   Vinyl-Auflege-Übergang; der Hüllen-Flug wirkte zu inszeniert.
 7. **Track-Hover:** Zeiger über einem Rillenband zeigt den Tracktitel als geätzte
    Beschriftung; Klick cueed dorthin.
 8. **Ambiente:** 7″-Single kleiner als 12″, großes Loch, 45-Adapter; Gatefold mit
@@ -399,7 +399,7 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 - [x] 33/45 (Tonhöhe und Tempo)
 - [x] Seiten-Flip-Animation und 7″-Darstellung
 - [ ] Locked-Groove-Thump am Seitenende
-- [ ] Ästhetik-Pass: Abrieb, Matrix-Ritzung, Staub, Licht, Hüllen-Animation, Gatefold
+- [ ] Ästhetik-Pass: Abrieb, Matrix-Ritzung, Staub, Licht, Gatefold
 - [x] Tonarmhöhe/Drehpunkt, größere Platte, Teller und Platte drehen gemeinsam
 
 **Abnahme:** Armwinkel und Rillenposition stimmen überein, Cueing sitzt auf dem
@@ -416,8 +416,8 @@ Der Interaktionskern ist erreicht; die Material- und Lichtpolitur folgt im Ästh
 - [x] Hülle (großes Cover, wendbar, generierte Rückseite), Singles
 - [x] Playlists als White-Label-Testpressung mit handbeschriftetem Label
 - [x] Echte Holz-/Metall-/Papier-Texturen als lokale Bitmaps
-- [x] Hüllen-Animation: Sleeve hebt sich, Platte gleitet auf den Teller
-- [x] Start-Sequenz: Arm schwenkt aus der Ablage, Nadel senkt sich, Drop/Knistern vor der Musik
+- [x] Kurzer Vinyl-Auflege-Übergang (Hüllen-Flug bewusst verworfen)
+- [x] Start-Sequenz: Arm schwenkt aus der Ablage, Nadel senkt sich, Drop/Knistern vor der Musik (lang & hörbar)
 - [ ] Liner-Notizen, Locked-Groove-Thump, vollständiges Reduced Motion
 
 **Abnahme:** Vergleich mit Referenz-Screenshots, 60 fps (Frame-Zeiten gemessen).

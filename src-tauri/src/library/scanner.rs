@@ -374,8 +374,11 @@ fn build_playlist(path: &Path, covers: &Path) -> Result<(Album, Vec<String>), St
 
     // A playlist has no artwork of its own: prefer a cover next to the list,
     // then the first track's embedded picture, then that track's folder cover.
-    let folder_cover = artwork::find_folder_cover(&folder).or(track_folder_cover);
-    let cover_source = artwork::bytes(cover_bytes.as_deref(), folder_cover.as_deref());
+    let playlist_cover = artwork::find_folder_cover(&folder);
+    let cover_source = playlist_cover
+        .as_deref()
+        .and_then(|path| fs::read(path).ok())
+        .or_else(|| artwork::bytes(cover_bytes.as_deref(), track_folder_cover.as_deref()));
 
     let album = assemble(
         AlbumMeta {

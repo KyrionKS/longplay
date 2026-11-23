@@ -345,8 +345,8 @@ impl Engine {
             if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) {
                 // Let the needle land and crackle before the first note. The
                 // track position stays put during this pre-roll.
-                dsp.pre_roll = u64::from(device_rate) * 4 / 5;
-                dsp.noise.trigger_surface(0.8);
+                dsp.pre_roll = u64::from(device_rate) * 8 / 5;
+                dsp.noise.trigger_surface(1.6);
             } else {
                 dsp.pre_roll = 0;
             }
@@ -381,7 +381,11 @@ impl Engine {
             }
 
             if dsp.pre_roll > 0 {
-                let (noise_left, noise_right) = dsp.noise.process(character, device_rate, 1.0);
+                // The touchdown should be clearly audible even when the
+                // user's surface-noise character is set low.
+                let cue_character = character.max(0.8);
+                let (noise_left, noise_right) =
+                    dsp.noise.process(cue_character, device_rate, 1.0);
                 frame[0] = soft_clip(noise_left * volume);
                 frame[1] = soft_clip(noise_right * volume);
                 dsp.pre_roll -= 1;
@@ -754,9 +758,25 @@ mod tests {
         engine.load_track(track(2.0, 440.0, 0.5), 0.0);
         engine.play();
         let mut dsp = DspState::new();
-        let mut out = vec![0.0; 48_000 * 2];
+        let mut out = vec![0.0; 96_000 * 2];
         engine.process(&mut out, 48_000, &mut dsp);
         assert!(engine.position_frames() > 0, "position advances after the drop");
+    }
+
+    #[test]
+    fn needle_pre_roll_lasts_more_than_a_second() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track(3.0, 440.0, 0.5), 0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        let mut out = vec![0.0; 48_000 * 2];
+        engine.process(&mut out, 48_000, &mut dsp);
+        assert_eq!(engine.position_frames(), 0, "the pre-roll should still hold");
+        let energy: f32 = out.iter().map(|sample| sample.abs()).sum();
+        assert!(energy > 50.0, "the pre-roll should be clearly audible: {energy}");
+        let peak = out.iter().fold(0.0f32, |peak, sample| peak.max(sample.abs()));
+        assert!(peak > 0.15, "needle drop should have a clear peak: {peak}");
     }
 
     #[test]

@@ -5,7 +5,6 @@
   import Crate from "$lib/components/Crate.svelte";
   import Deck from "$lib/components/Deck.svelte";
   import Gatefold from "$lib/components/Gatefold.svelte";
-  import Flight from "$lib/components/Flight.svelte";
   import { addMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
   import {
     loadSide,
@@ -22,15 +21,6 @@
   let sleeveFlipped = $state(false);
   let cuePhase = $state<"swing" | "lower" | null>(null);
   let cueToken = 0;
-  let platter = $state<{ x: number; y: number; r: number } | null>(null);
-  let flight = $state<{
-    album: Album;
-    from: { left: number; top: number; width: number; height: number };
-  } | null>(null);
-
-  const reducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -157,30 +147,12 @@
   }
 
   function select(album: Album) {
-    if (flight) return;
     cancelCue();
-    const element = document.querySelector<HTMLElement>(`[data-album-id="${album.id}"]`);
-    const rect = element?.getBoundingClientRect();
     selectedId = album.id;
     sideIndex = 0;
     gatefoldOpen = false;
     sleeveFlipped = false;
-    if (rect && platter && !reducedMotion) {
-      flight = {
-        album,
-        from: {
-          left: rect.left,
-          top: rect.top,
-          width: rect.width,
-          height: rect.height,
-        },
-      };
-    }
     void loadSide(album.id, 0, false);
-  }
-
-  function endFlight() {
-    flight = null;
   }
 
   function changeSide(index: number) {
@@ -210,10 +182,10 @@
     if (atStart || atEnd) {
       const token = ++cueToken;
       cuePhase = "swing";
-      await new Promise((resolve) => setTimeout(resolve, 720));
+      await new Promise((resolve) => setTimeout(resolve, 1400));
       if (token !== cueToken) return;
       cuePhase = "lower";
-      await new Promise((resolve) => setTimeout(resolve, 240));
+      await new Promise((resolve) => setTimeout(resolve, 450));
       if (token !== cueToken) return;
       cuePhase = null;
     }
@@ -252,9 +224,7 @@
       {sideIndex}
       playback={playback.state}
       grooves={loadedState?.grooves ?? []}
-      conceal={!!flight}
       cuePhase={cuePhase}
-      onGeometry={(geometry) => (platter = geometry)}
       onSide={changeSide}
       onToggle={toggle}
       onRpm={changeRpm}
@@ -264,10 +234,6 @@
       }}
     />
   </div>
-
-  {#if flight && platter}
-    <Flight album={flight.album} from={flight.from} target={platter} onDone={endFlight} />
-  {/if}
 
   {#if library.error || playback.error}
     <div class="error" role="alert">{library.error ?? playback.error}</div>
