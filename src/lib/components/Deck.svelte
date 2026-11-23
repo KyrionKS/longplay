@@ -708,7 +708,7 @@
       class:ready={!!album && !loading}
       class:playing
       type="button"
-      disabled={!album || loading}
+      disabled={!album}
       onclick={onToggle}
       title={playing ? "Wiedergabe anhalten" : "Platte starten"}
     >

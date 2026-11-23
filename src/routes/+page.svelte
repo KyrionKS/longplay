@@ -21,6 +21,7 @@
   let sleeveFlipped = $state(false);
   let cuePhase = $state<"swing" | "lower" | null>(null);
   let cueToken = 0;
+  let startPending = $state(false);
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -166,17 +167,38 @@
   function cancelCue() {
     cueToken += 1;
     cuePhase = null;
+    startPending = false;
   }
 
+  const ready = $derived(!!loadedState && !loadedState.loading);
+
+  $effect(() => {
+    if (startPending && ready && !cuePhase) {
+      startPending = false;
+      void beginStart();
+    }
+  });
+
   async function toggle() {
-    if (!selected) return;
+    if (!selected || cuePhase) return;
     const state = playback.state;
-    if (!state?.loaded || state.loading || cuePhase) return;
-    if (state.playing) {
+    if (state?.playing) {
       void togglePlayback();
       return;
     }
+    if (!ready) {
+      // The click can arrive while the side is still loading (especially on a
+      // NAS). Remember it and start as soon as the side is ready.
+      startPending = true;
+      return;
+    }
+    await beginStart();
+  }
 
+  async function beginStart() {
+    if (!selected || cuePhase) return;
+    const state = playback.state;
+    if (!state?.loaded || state.loading) return;
     const atEnd = state.duration > 0 && state.position >= state.duration - 0.08;
     const atStart = state.position <= 0.05;
     if (atStart || atEnd) {
