@@ -178,7 +178,7 @@
   const stylusY = $derived(pivotY + armLengthPx * Math.sin(armPhi));
   const phiDeg = $derived((armPhi * 180) / Math.PI);
   // The headshell is offset against the arm axis; the stylus sits in its middle.
-  const shellPhi = $derived(armPhi + (16 * Math.PI) / 180);
+  const shellPhi = $derived(armPhi + (20 * Math.PI) / 180);
   const shellPhiDeg = $derived((shellPhi * 180) / Math.PI);
   const shellRearX = $derived(
     stylusX - Math.cos(shellPhi) * armLengthPx * 0.032,
@@ -186,6 +186,25 @@
   const shellRearY = $derived(
     stylusY - Math.sin(shellPhi) * armLengthPx * 0.032,
   );
+
+  // S-shaped arm tube: two opposite bends between the pivot and the headshell.
+  const tubeChordX = $derived(shellRearX - pivotX);
+  const tubeChordY = $derived(shellRearY - pivotY);
+  const tubeLength = $derived(
+    Math.max(1, Math.hypot(tubeChordX, tubeChordY)),
+  );
+  const tubePerpX = $derived(-tubeChordY / tubeLength);
+  const tubePerpY = $derived(tubeChordX / tubeLength);
+  const sBend = $derived(armLengthPx * 0.06);
+  const control1X = $derived(pivotX + tubeChordX * 0.3 + tubePerpX * sBend);
+  const control1Y = $derived(pivotY + tubeChordY * 0.3 + tubePerpY * sBend);
+  const control2X = $derived(pivotX + tubeChordX * 0.7 - tubePerpX * sBend);
+  const control2Y = $derived(pivotY + tubeChordY * 0.7 - tubePerpY * sBend);
+  const armPath = $derived(
+    `M ${pivotX} ${pivotY} C ${control1X} ${control1Y} ${control2X} ${control2Y} ${shellRearX} ${shellRearY}`,
+  );
+  const restX = $derived(pivotX + Math.cos(REST_PHI) * armLengthPx);
+  const restY = $derived(pivotY + Math.sin(REST_PHI) * armLengthPx);
   const weightX = $derived(pivotX - Math.cos(armPhi) * armLengthPx * 0.24);
   const weightY = $derived(pivotY - Math.sin(armPhi) * armLengthPx * 0.24);
 
@@ -413,65 +432,129 @@
       </defs>
 
       <g filter="url(#armShadow)">
+        <!-- Gimbal housing -->
         <ellipse
           cx={pivotX}
           cy={pivotY}
-          rx={Math.max(28, armLengthPx * 0.1)}
-          ry={Math.max(25, armLengthPx * 0.09)}
+          rx={Math.max(34, armLengthPx * 0.115)}
+          ry={Math.max(30, armLengthPx * 0.1)}
           fill="url(#base)"
           opacity="0.95"
         />
+        <circle
+          cx={pivotX}
+          cy={pivotY}
+          r={Math.max(28, armLengthPx * 0.088)}
+          fill="none"
+          stroke="rgba(255,255,255,0.16)"
+          stroke-width="3"
+        />
 
+        <!-- Arm rest -->
+        <g transform={`translate(${restX} ${restY})`}>
+          <rect x="-3.5" y="0" width="7" height={armLengthPx * 0.075} rx="2" fill="#242424" />
+          <path
+            d={`M ${-armLengthPx * 0.03} ${-armLengthPx * 0.012} L 0 0 L ${armLengthPx * 0.03} ${-armLengthPx * 0.012}`}
+            fill="none"
+            stroke="#2f2f2f"
+            stroke-width="5"
+            stroke-linecap="round"
+          />
+        </g>
+
+        <!-- Cue lever and anti-skate -->
+        <g>
+          <circle cx={pivotX - armLengthPx * 0.12} cy={pivotY + armLengthPx * 0.1} r={armLengthPx * 0.03} fill="#242424" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" />
+          <path
+            d={`M ${pivotX + armLengthPx * 0.06} ${pivotY + armLengthPx * 0.1} L ${pivotX + armLengthPx * 0.12} ${pivotY + armLengthPx * 0.17}`}
+            stroke="#9a9a9a"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <circle cx={pivotX + armLengthPx * 0.12} cy={pivotY + armLengthPx * 0.17} r={armLengthPx * 0.018} fill="#1a1a1a" />
+        </g>
+
+        <!-- Straight rear stub -->
         <path
-          d={`M${weightX} ${weightY} L${shellRearX} ${shellRearY}`}
+          d={`M${weightX} ${weightY} L${pivotX} ${pivotY}`}
           stroke="#0d0d0d"
+          stroke-width="14"
+          stroke-linecap="round"
+        />
+        <path
+          d={`M${weightX} ${weightY} L${pivotX} ${pivotY}`}
+          stroke="#c9c9c9"
+          stroke-width="9"
+          stroke-linecap="round"
+        />
+
+        <!-- S-shaped tube -->
+        <path
+          d={armPath}
+          fill="none"
+          stroke="#0d0d0d"
+          stroke-width="16"
+          stroke-linecap="round"
+        />
+        <path
+          d={armPath}
+          fill="none"
+          stroke="#c9c9c9"
           stroke-width="11"
           stroke-linecap="round"
         />
         <path
-          d={`M${weightX} ${weightY} L${shellRearX} ${shellRearY}`}
-          stroke="#c9c9c9"
-          stroke-width="7"
-          stroke-linecap="round"
-        />
-        <path
-          d={`M${pivotX} ${pivotY} L${shellRearX} ${shellRearY}`}
+          d={armPath}
+          fill="none"
           stroke="rgba(255,255,255,0.55)"
-          stroke-width="1.4"
+          stroke-width="2"
           stroke-linecap="round"
         />
 
+        <!-- Counterweight with knurled dial -->
         <g transform={`translate(${weightX} ${weightY}) rotate(${phiDeg})`}>
           <rect
-            x={-armLengthPx * 0.08}
-            y={-armLengthPx * 0.042}
-            width={armLengthPx * 0.16}
-            height={armLengthPx * 0.084}
-            rx={armLengthPx * 0.04}
+            x={-armLengthPx * 0.085}
+            y={-armLengthPx * 0.045}
+            width={armLengthPx * 0.17}
+            height={armLengthPx * 0.09}
+            rx={armLengthPx * 0.042}
             fill="url(#weight)"
           />
           <rect
-            x={-armLengthPx * 0.08}
-            y={-armLengthPx * 0.042}
-            width={armLengthPx * 0.16}
-            height={armLengthPx * 0.084}
-            rx={armLengthPx * 0.04}
+            x={-armLengthPx * 0.085}
+            y={-armLengthPx * 0.045}
+            width={armLengthPx * 0.17}
+            height={armLengthPx * 0.09}
+            rx={armLengthPx * 0.042}
             fill="none"
-            stroke="rgba(0,0,0,0.45)"
+            stroke="rgba(0,0,0,0.5)"
           />
+          <line x1={-armLengthPx * 0.05} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.05} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.35)" stroke-width="1.4" />
+          <line x1={-armLengthPx * 0.03} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.03} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.28)" stroke-width="1.2" />
+          <line x1={-armLengthPx * 0.01} y1={-armLengthPx * 0.042} x2={-armLengthPx * 0.01} y2={armLengthPx * 0.042} stroke="rgba(0,0,0,0.22)" stroke-width="1" />
         </g>
 
-        <circle cx={pivotX} cy={pivotY} r={Math.max(16, armLengthPx * 0.062)} fill="url(#base)" />
+        <!-- Pivot -->
+        <circle cx={pivotX} cy={pivotY} r={Math.max(18, armLengthPx * 0.07)} fill="url(#base)" />
         <circle
           cx={pivotX}
           cy={pivotY}
-          r={Math.max(8, armLengthPx * 0.032)}
+          r={Math.max(9, armLengthPx * 0.036)}
           fill="#232323"
           stroke="rgba(255,255,255,0.25)"
         />
         <circle cx={pivotX} cy={pivotY} r={Math.max(3, armLengthPx * 0.012)} fill="#0d0d0d" />
 
+        <!-- Headshell with finger lift, stylus centred -->
         <g transform={`translate(${stylusX} ${stylusY}) rotate(${shellPhiDeg})`}>
+          <path
+            d={`M ${-armLengthPx * 0.004} ${-armLengthPx * 0.026} Q ${armLengthPx * 0.02} ${-armLengthPx * 0.05} ${armLengthPx * 0.036} ${-armLengthPx * 0.022}`}
+            fill="none"
+            stroke="#cfcfcf"
+            stroke-width="3"
+            stroke-linecap="round"
+          />
           <rect
             x={-armLengthPx * 0.03}
             y={-armLengthPx * 0.022}
@@ -479,6 +562,7 @@
             height={armLengthPx * 0.044}
             rx="3"
             fill="#1c1c1c"
+            stroke="rgba(255,255,255,0.12)"
           />
           <rect
             x={-armLengthPx * 0.018}
