@@ -143,7 +143,13 @@
             {:else if total === 0 && row === 0}
               <button class="slot add" type="button" onclick={onAdd} title="Musikordner hinzufügen">
                 <span class="plus">+</span>
-                <span class="label">{scanning ? "Scanne …" : "Ordner<br />hinzufügen"}</span>
+                <span class="label">
+                  {#if scanning}
+                    Scanne …
+                  {:else}
+                    Ordner<br />hinzufügen
+                  {/if}
+                </span>
               </button>
             {:else}
               <div class="slot" aria-hidden="true"></div>

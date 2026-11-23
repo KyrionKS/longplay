@@ -177,6 +177,15 @@
   const stylusX = $derived(pivotX + armLengthPx * Math.cos(armPhi));
   const stylusY = $derived(pivotY + armLengthPx * Math.sin(armPhi));
   const phiDeg = $derived((armPhi * 180) / Math.PI);
+  // The headshell is offset against the arm axis; the stylus sits in its middle.
+  const shellPhi = $derived(armPhi + (16 * Math.PI) / 180);
+  const shellPhiDeg = $derived((shellPhi * 180) / Math.PI);
+  const shellRearX = $derived(
+    stylusX - Math.cos(shellPhi) * armLengthPx * 0.032,
+  );
+  const shellRearY = $derived(
+    stylusY - Math.sin(shellPhi) * armLengthPx * 0.032,
+  );
   const weightX = $derived(pivotX - Math.cos(armPhi) * armLengthPx * 0.24);
   const weightY = $derived(pivotY - Math.sin(armPhi) * armLengthPx * 0.24);
 
@@ -414,19 +423,19 @@
         />
 
         <path
-          d={`M${weightX} ${weightY} L${stylusX} ${stylusY}`}
+          d={`M${weightX} ${weightY} L${shellRearX} ${shellRearY}`}
           stroke="#0d0d0d"
           stroke-width="11"
           stroke-linecap="round"
         />
         <path
-          d={`M${weightX} ${weightY} L${stylusX} ${stylusY}`}
+          d={`M${weightX} ${weightY} L${shellRearX} ${shellRearY}`}
           stroke="#c9c9c9"
           stroke-width="7"
           stroke-linecap="round"
         />
         <path
-          d={`M${pivotX} ${pivotY} L${stylusX} ${stylusY}`}
+          d={`M${pivotX} ${pivotY} L${shellRearX} ${shellRearY}`}
           stroke="rgba(255,255,255,0.55)"
           stroke-width="1.4"
           stroke-linecap="round"
@@ -462,25 +471,25 @@
         />
         <circle cx={pivotX} cy={pivotY} r={Math.max(3, armLengthPx * 0.012)} fill="#0d0d0d" />
 
-        <g transform={`translate(${stylusX} ${stylusY}) rotate(${phiDeg + 16})`}>
+        <g transform={`translate(${stylusX} ${stylusY}) rotate(${shellPhiDeg})`}>
           <rect
-            x={-armLengthPx * 0.045}
+            x={-armLengthPx * 0.03}
             y={-armLengthPx * 0.022}
-            width={armLengthPx * 0.055}
+            width={armLengthPx * 0.06}
             height={armLengthPx * 0.044}
             rx="3"
             fill="#1c1c1c"
           />
           <rect
-            x={-armLengthPx * 0.038}
+            x={-armLengthPx * 0.018}
             y={-armLengthPx * 0.016}
-            width={armLengthPx * 0.03}
+            width={armLengthPx * 0.036}
             height={armLengthPx * 0.032}
             rx="2"
             fill="#b5342a"
           />
-          <circle r={Math.max(1.8, armLengthPx * 0.007)} fill="#f2f2f2" />
-          <circle r={Math.max(3.2, armLengthPx * 0.012)} fill="rgba(0,0,0,0.28)" />
+          <circle r={Math.max(3.2, armLengthPx * 0.012)} fill="rgba(0,0,0,0.32)" />
+          <circle r={Math.max(1.8, armLengthPx * 0.007)} fill="#f4f4f4" />
         </g>
       </g>
     </svg>
