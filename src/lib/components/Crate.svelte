@@ -11,7 +11,8 @@
     sort: SortKey;
     query: string;
     scanning: boolean;
-    onAdd: () => void;
+    root: string | null;
+    onChoose: () => void;
     onRescan: () => void;
     onSelect: (album: Album) => void;
     onPage: (page: number) => void;
@@ -27,7 +28,8 @@
     sort,
     query,
     scanning,
-    onAdd,
+    root,
+    onChoose,
     onRescan,
     onSelect,
     onPage,
@@ -44,6 +46,10 @@
 
   let searchOpen = $state(false);
   let input: HTMLInputElement | undefined = $state();
+
+  const rootName = $derived(
+    root ? (root.split(/[\\/]/).filter(Boolean).pop() ?? root) : "Mediathek",
+  );
 
   const cells = $derived.by(() => {
     const out: (Album | null)[] = albums.slice(0, 9);
@@ -144,13 +150,18 @@
             {#if album}
               <Sleeve {album} onselect={() => onSelect(album)} />
             {:else if total === 0 && row === 0}
-              <button class="slot add" type="button" onclick={onAdd} title="Musikordner hinzufügen">
+              <button
+                class="slot add"
+                type="button"
+                onclick={onChoose}
+                title="Mediathek-Ordner wählen"
+              >
                 <span class="plus">+</span>
                 <span class="label">
                   {#if scanning}
                     Scanne …
                   {:else}
-                    Ordner<br />hinzufügen
+                    Mediathek<br />wählen
                   {/if}
                 </span>
               </button>
@@ -168,13 +179,15 @@
     {#if scanning}
       <span class="status"><span class="spinner"></span> Bibliothek wird gescannt …</span>
     {:else if total === 0}
-      <span class="hint">Noch keine Platten — füge einen Ordner mit deiner Musik hinzu.</span>
+      <span class="hint">Noch keine Platten — wähle den Ordner mit deiner Musik.</span>
     {:else}
-      <span class="hint">{total} {total === 1 ? "Album" : "Alben"}</span>
+      <span class="hint" title={root ?? ""}>
+        {total} {total === 1 ? "Album" : "Alben"} · {rootName}
+      </span>
       <button class="text-button" type="button" disabled={scanning} onclick={onRescan}>
         Aktualisieren
       </button>
-      <button class="text-button" type="button" onclick={onAdd}>＋ Ordner hinzufügen</button>
+      <button class="text-button" type="button" onclick={onChoose}>Ordner ändern</button>
     {/if}
   </div>
 </section>

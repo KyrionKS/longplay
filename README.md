@@ -65,7 +65,7 @@ Ruhe zur äußeren Rille (~2,4 s), senkt sich ab (~0,5 s); danach läuft die Ein
 beginnt der erste Track. Beide Samples variieren bei jedem Start leicht in Pegel,
 Geschwindigkeit und Startposition.
 
-**Playlists:** `.m3u`/`.m3u8`-Dateien in den gescannten Ordnern werden als
+**Playlists:** `.m3u`/`.m3u8`-Dateien im Mediathek-Ordner werden als
 White-Label-Testpressung gepresst: handbeschriftetes Label, „Promo · Not for Sale“
 statt Barcode. Als Hüllenbild dient ein `cover.jpg`/`cover.png` neben der Playlist,
 sonst das Cover des ersten Tracks, sonst die Papier-Testpressung mit Stempel.
@@ -77,7 +77,9 @@ Staub und feine Kratzer auf der Platte, ein wandernder Warp-Glanz und ein warmer
 Lichtkegel über der Kiste. Holz, gebürstetes Metall und Papier liegen als lokale
 Bitmaps in `static/textures/`; Verschleiß, Licht und Staub bleiben prozedural.
 
-Zum schnellen UI-Test ohne Ordnerdialog scannt `LONGPLAY_SCAN_DIR` beim Start:
+Die Mediathek ist genau ein Ordner; in der Kiste lässt er sich wählen und später
+ändern, „Aktualisieren“ scannt ihn neu. Zum schnellen UI-Test ohne Ordnerdialog
+scannt `LONGPLAY_SCAN_DIR` beim Start diesen einen Ordner:
 
 ```bash
 LONGPLAY_SCAN_DIR=/pfad/zur/musik npm run tauri dev

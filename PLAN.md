@@ -31,7 +31,7 @@ Scratchen ist bewusst kein Feature; im Mittelpunkt steht das Vinyl-Erlebnis.
 
 | Bereich | Umfang |
 |---|---|
-| Bibliothek | Ordner hinzufügen, rekursiv scannen, Alben gruppieren, Cover, Farbpalette, Suche, Sortierung, inkrementeller Rescan |
+| Bibliothek | einen Mediathek-Ordner wählen, rekursiv scannen, Alben gruppieren, Cover, Farbpalette, Suche, Sortierung, inkrementeller Rescan |
 | CUE | `.cue` lesen, Single-File- und Multi-File-Alben, Pregaps, Seitenhinweise |
 | Seiten | A/B pro Album (generisch N Seiten), Standard = manuell wenden, Auto-Flip optional |
 | Audio | FLAC/ALAC/AAC/MP3/WAV/AIFF, Varispeed, Cueing, Pregap-Stille, Song-für-Song-Laden |

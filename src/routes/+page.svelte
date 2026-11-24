@@ -5,7 +5,7 @@
   import Crate from "$lib/components/Crate.svelte";
   import Deck from "$lib/components/Deck.svelte";
   import Gatefold from "$lib/components/Gatefold.svelte";
-  import { addMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
+  import { chooseMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
   import {
     loadSide,
     pausePlayback,
@@ -275,7 +275,8 @@
       sort={library.sort}
       query={library.query}
       scanning={library.scanning || library.loading}
-      onAdd={addMusicFolder}
+      root={library.root}
+      onChoose={chooseMusicFolder}
       onRescan={rescan}
       onSelect={select}
       onPage={(page) => (library.page = page)}

@@ -4,7 +4,7 @@ import type { Album, ScanSummary, SortKey } from "./types";
 
 class LibraryState {
   albums = $state<Album[]>([]);
-  folders = $state<string[]>([]);
+  root = $state<string | null>(null);
   loading = $state(true);
   scanning = $state(false);
   error = $state<string | null>(null);
@@ -17,12 +17,12 @@ export const library = new LibraryState();
 
 export async function loadLibrary(): Promise<void> {
   try {
-    const [albums, folders] = await Promise.all([
+    const [albums, root] = await Promise.all([
       invoke<Album[]>("library_load"),
-      invoke<string[]>("library_folders"),
+      invoke<string | null>("library_root"),
     ]);
     library.albums = albums;
-    library.folders = folders;
+    library.root = root;
     library.error = null;
   } catch (error) {
     library.error = String(error);
@@ -31,34 +31,32 @@ export async function loadLibrary(): Promise<void> {
   }
 }
 
-export async function addMusicFolder(): Promise<void> {
+export async function chooseMusicFolder(): Promise<void> {
   try {
     const picked = await open({
       directory: true,
-      multiple: true,
-      title: "Musikordner wählen",
+      multiple: false,
+      title: "Mediathek wählen",
     });
-    if (!picked) return;
+    if (!picked || Array.isArray(picked)) return;
 
-    const chosen = Array.isArray(picked) ? picked : [picked];
-    const folders = Array.from(new Set([...library.folders, ...chosen]));
-    await scan(folders);
+    await scan(picked);
   } catch (error) {
     library.error = `Ordnerauswahl fehlgeschlagen: ${String(error)}`;
   }
 }
 
 export async function rescan(): Promise<void> {
-  if (library.folders.length === 0) return;
-  await scan(library.folders);
+  if (!library.root) return;
+  await scan(library.root);
 }
 
-async function scan(folders: string[]): Promise<void> {
+async function scan(folder: string): Promise<void> {
   library.scanning = true;
   library.error = null;
   try {
-    await invoke<ScanSummary>("library_scan", { folders });
-    library.folders = folders;
+    await invoke<ScanSummary>("library_scan", { folder });
+    library.root = folder;
     await loadLibrary();
   } catch (error) {
     library.error = String(error);

@@ -177,6 +177,17 @@ impl Db {
         Ok(())
     }
 
+    /// The library has exactly one root. Older databases may still hold
+    /// several folders; the first one (oldest) is used and a scan collapses
+    /// the table to that single root.
+    pub fn set_root(&mut self, folder: &std::path::Path) -> Result<(), DbError> {
+        self.set_folders(&[folder.to_path_buf()])
+    }
+
+    pub fn root(&self) -> Result<Option<String>, DbError> {
+        Ok(self.folders()?.into_iter().next())
+    }
+
     pub fn folders(&self) -> Result<Vec<String>, DbError> {
         let mut stmt = self
             .conn
@@ -273,5 +284,23 @@ mod tests {
         ])
         .unwrap();
         assert_eq!(db.folders().unwrap(), vec!["/music/a", "/music/b"]);
+    }
+
+    #[test]
+    fn keeps_a_single_library_root() {
+        let mut db = Db::in_memory().unwrap();
+        assert_eq!(db.root().unwrap(), None);
+
+        // A legacy database with several folders falls back to the first one.
+        db.set_folders(&[
+            std::path::PathBuf::from("/music/a"),
+            std::path::PathBuf::from("/music/b"),
+        ])
+        .unwrap();
+        assert_eq!(db.root().unwrap().as_deref(), Some("/music/a"));
+
+        db.set_root(std::path::Path::new("/music/b")).unwrap();
+        assert_eq!(db.folders().unwrap(), vec!["/music/b"]);
+        assert_eq!(db.root().unwrap().as_deref(), Some("/music/b"));
     }
 }

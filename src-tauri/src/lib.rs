@@ -40,31 +40,31 @@ fn library_load(state: tauri::State<'_, AppState>) -> Result<Vec<Album>, String>
 }
 
 #[tauri::command]
-fn library_folders(state: tauri::State<'_, AppState>) -> Result<Vec<String>, String> {
+fn library_root(state: tauri::State<'_, AppState>) -> Result<Option<String>, String> {
     let db = state
         .db
         .lock()
         .map_err(|_| "Datenbank ist gesperrt".to_string())?;
-    db.folders().map_err(|error| error.to_string())
+    db.root().map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 async fn library_scan(
-    folders: Vec<String>,
+    folder: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<ScanSummary, String> {
     let db = state.db.clone();
     let covers_dir = state.covers_dir.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
-        let roots: Vec<PathBuf> = folders.iter().map(PathBuf::from).collect();
+        let root = PathBuf::from(folder);
         let mut guard = db
             .lock()
             .map_err(|_| "Datenbank ist gesperrt".to_string())?;
-        let summary =
-            scanner::scan(&roots, &mut guard, &covers_dir).map_err(|error| error.to_string())?;
+        let summary = scanner::scan(std::slice::from_ref(&root), &mut guard, &covers_dir)
+            .map_err(|error| error.to_string())?;
         guard
-            .set_folders(&roots)
+            .set_root(&root)
             .map_err(|error| error.to_string())?;
         Ok(summary)
     })
@@ -161,14 +161,14 @@ pub fn run() {
             let mut db =
                 Db::open(&data_dir.join("library.sqlite3")).map_err(|error| error.to_string())?;
 
-            // Dev hook: scan one or more folders at startup so the UI can be
+            // Dev hook: scan the library root at startup so the UI can be
             // checked without clicking through the folder picker.
-            if let Some(paths) = std::env::var_os("LONGPLAY_SCAN_DIR") {
-                let roots: Vec<PathBuf> = std::env::split_paths(&paths).collect();
-                match scanner::scan(&roots, &mut db, &covers_dir) {
+            if let Some(path) = std::env::var_os("LONGPLAY_SCAN_DIR") {
+                let root = PathBuf::from(path);
+                match scanner::scan(std::slice::from_ref(&root), &mut db, &covers_dir) {
                     Ok(summary) => {
                         eprintln!("LONGPLAY_SCAN_DIR: {} Alben gescannt", summary.albums);
-                        let _ = db.set_folders(&roots);
+                        let _ = db.set_root(&root);
                     }
                     Err(error) => eprintln!("LONGPLAY_SCAN_DIR: {error}"),
                 }
@@ -187,7 +187,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             app_version,
             library_load,
-            library_folders,
+            library_root,
             library_scan,
             playback_load,
             playback_state,
