@@ -12,10 +12,11 @@ Beide Dateien sind Ausschnitte aus Freesound-Aufnahmen. Sie wurden auf Mono,
 
 ## `vinyl_static.wav`
 
-- Original: „Vinyl Crackle (Real).mp3“ von **beautifuldaymonster1968**
-- Quelle: https://freesound.org/people/beautifuldaymonster1968/sounds/434822/
+- Original: „Vinyl Surface Noise 3 blank groove 22 minutes.wav“ von **nervousneal**
+- Quelle: https://freesound.org/people/nervousneal/sounds/586430/
 - Lizenz: **CC0 1.0** (Public Domain)
-- Änderung: Ausschnitt 12–24 s, auf RMS 0,055 normalisiert, Mono/48 kHz.
+- Änderung: Ausschnitt 1140–1200 s, auf RMS −45 dBFS normalisiert, Mono/48 kHz.
+  Das Original ist eine unveränderte Leerrille einer Testpressung von 1961.
 
 Die Aufnahmen werden zur Laufzeit nur lokal aus der App gelesen; es gibt keine
 Netzwerkanfragen.

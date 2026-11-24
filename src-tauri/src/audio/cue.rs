@@ -162,10 +162,10 @@ impl CueVoice {
             0.0
         };
         self.surface_step = samples.surface.rate as f32 / device_rate * self.between(0.98, 1.02);
-        // The bundled surface recording is dense and bright; at the old gain it
-        // drowned both the drop and the music. Keep it as a faint bed with
-        // occasional ticks, well below the music.
-        self.surface_gain = self.between(0.22, 0.34);
+        // The bundled blank-groove recording is normalized to -45 dBFS RMS, so
+        // it sits well below the music without further attenuation. Only vary
+        // it slightly between starts.
+        self.surface_gain = self.between(0.92, 1.06);
         self.surface_left = 2.0 + 2.0 * self.random();
         self.surface_ramp = 0.0;
 
