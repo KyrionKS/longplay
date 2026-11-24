@@ -298,6 +298,7 @@ impl Session {
             };
             self.engine.seek_local_seconds(local);
             if play_after {
+                self.engine.suppress_next_pre_roll();
                 self.engine.play();
             }
             return;
@@ -318,6 +319,7 @@ impl Session {
         if let Some(track) = self.engine.take_next(target.index) {
             self.engine.load_track(track, local);
             if was_playing {
+                self.engine.suppress_next_pre_roll();
                 self.engine.play();
             }
             return;
@@ -340,6 +342,7 @@ impl Session {
             session.engine.load_track(Arc::new(track), local);
             session.loading.store(false, Ordering::Relaxed);
             if was_playing {
+                session.engine.suppress_next_pre_roll();
                 session.engine.play();
             }
         });

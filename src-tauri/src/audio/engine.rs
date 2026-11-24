@@ -63,6 +63,7 @@ pub struct Engine {
     volume: AtomicU32,
     character: AtomicU32,
     needle_pre_roll: AtomicBool,
+    suppress_pre_roll: AtomicBool,
     runout_seconds: AtomicU32,
     track_index: AtomicU64,
     side_start: AtomicU64,
@@ -94,6 +95,7 @@ impl Engine {
             volume: AtomicU32::new(0.9f32.to_bits()),
             character: AtomicU32::new(0.3f32.to_bits()),
             needle_pre_roll: AtomicBool::new(false),
+            suppress_pre_roll: AtomicBool::new(false),
             runout_seconds: AtomicU32::new(RUNOUT_SECONDS.to_bits()),
             track_index: AtomicU64::new(0),
             side_start: AtomicU64::new(0.0f64.to_bits()),
@@ -234,6 +236,12 @@ impl Engine {
         self.needle_pre_roll.store(enabled, Ordering::Relaxed);
     }
 
+    /// Manual cueing places the needle by hand, so the next start must not
+    /// replay the lead-in drop and static.
+    pub fn suppress_next_pre_roll(&self) {
+        self.suppress_pre_roll.store(true, Ordering::Relaxed);
+    }
+
     /// How long the stylus rides the runout groove at the end of a side.
     pub fn set_runout_seconds(&self, seconds: f64) {
         store_f32(&self.runout_seconds, seconds.max(0.0) as f32);
@@ -343,6 +351,10 @@ impl Engine {
             return;
         }
 
+        // Consume a queued cue suppression even if playback is already running,
+        // so it cannot leak into the next real start.
+        let suppressed = self.suppress_pre_roll.swap(false, Ordering::Relaxed);
+
         let device_rate = device_rate.max(1);
         let base_rate = f64::from(load_f32(&self.rate))
             * (f64::from(
@@ -356,13 +368,10 @@ impl Engine {
         let sample_rate = f64::from(device_rate);
 
         if !dsp.was_playing {
-            let track_rate = current
-                .as_ref()
-                .map(|track| track.rate)
-                .unwrap_or(device_rate);
-            let at_side_start = self.position.load(Ordering::Relaxed) as f64
-                <= f64::from(track_rate) * 0.05;
-            if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) {
+            // The lead-in belongs to the start of the side, not to the start of
+            // every track: a cue into track 3 must not replay the static.
+            let at_side_start = self.side_position_seconds() <= 0.05;
+            if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) && !suppressed {
                 // Let the needle land and the lead-in groove run before the
                 // first note. The track position stays put during this pre-roll.
                 let seconds = dsp.cue.start(device_rate);
@@ -540,6 +549,40 @@ mod tests {
         let mut out = vec![0.0; frames * 2];
         engine.process(&mut out, 48_000, dsp);
         out
+    }
+
+    #[test]
+    fn start_of_side_plays_the_lead_in() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track(1.0, 440.0, 0.5), 0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        render(&engine, &mut dsp, 480);
+        assert!(dsp.pre_roll > 0, "the side start should play the lead-in");
+    }
+
+    #[test]
+    fn cueing_mid_side_skips_the_lead_in() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track_at(2, 61.5, 1.0, 440.0, 0.5), 0.0);
+        engine.play();
+        let mut dsp = DspState::new();
+        render(&engine, &mut dsp, 480);
+        assert_eq!(dsp.pre_roll, 0, "no lead-in when starting mid-side");
+    }
+
+    #[test]
+    fn a_manual_cue_suppresses_the_next_lead_in() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track(1.0, 440.0, 0.5), 0.0);
+        engine.suppress_next_pre_roll();
+        engine.play();
+        let mut dsp = DspState::new();
+        render(&engine, &mut dsp, 480);
+        assert_eq!(dsp.pre_roll, 0, "a manual cue places the needle by hand");
     }
 
     #[test]
