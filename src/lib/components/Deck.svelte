@@ -154,7 +154,7 @@
   let armPhi = $state(REST_PHI);
 
   const homing = $derived(
-    (stopped || atEnd) &&
+    (stopped || atEnd || loading) &&
       !cuePhase &&
       !armPlaced &&
       Math.abs(armPhi - REST_PHI) > 0.03,
@@ -428,7 +428,7 @@
                 class="side-tab"
                 class:active={index === sideIndex}
                 type="button"
-                disabled={loading}
+                disabled={loading || busy}
                 onclick={() => onSide(index)}
                 title={`Seite ${diskSide.label} auflegen`}
               >

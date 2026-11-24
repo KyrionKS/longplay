@@ -168,13 +168,22 @@
     void loadSide(album.id, 0, false);
   }
 
-  function changeSide(index: number) {
+  async function changeSide(index: number) {
     if (!selected) return;
     cancelCue();
     liftUp = false;
     const wasPlaying = !!playback.state?.playing;
     sideIndex = index;
-    void loadSide(selected.id, index, wasPlaying);
+    // Load the new side without autoplay and let the normal start sequence
+    // swing the arm in once it is ready; otherwise the arm jumps to the groove.
+    await loadSide(selected.id, index, false);
+    if (
+      wasPlaying &&
+      playback.state?.albumId === selected.id &&
+      playback.state?.sideIndex === index
+    ) {
+      startPending = true;
+    }
   }
 
   function cancelCue() {
