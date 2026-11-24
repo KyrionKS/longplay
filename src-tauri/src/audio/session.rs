@@ -253,6 +253,11 @@ impl Session {
     }
 
     fn restart_side(self: &Arc<Self>) {
+        self.reload_side(true);
+    }
+
+    /// Reloads the first track of the current side, optionally playing it.
+    fn reload_side(self: &Arc<Self>, autoplay: bool) {
         let side = self.side.lock().ok().and_then(|slot| slot.clone());
         let format = self
             .format
@@ -266,12 +271,16 @@ impl Session {
             .unwrap_or_default();
         let side_index = self.side_index.load(Ordering::Relaxed) as usize;
         if let Some(side) = side {
-            self.load(&album_id, side_index, &side, format, true);
+            self.load(&album_id, side_index, &side, format, autoplay);
         }
     }
 
-    pub fn stop(&self) {
+    /// STOP returns to the start of the side, not just of the current track.
+    pub fn stop(self: &Arc<Self>) {
         self.engine.stop();
+        if self.engine.side_position_seconds() > 0.05 {
+            self.reload_side(false);
+        }
     }
 
     pub fn seek(self: &Arc<Self>, seconds: f64) {
@@ -648,6 +657,20 @@ mod tests {
 
         session.seek(0.2);
         wait_until(|| session.state().track_index == 0 && session.state().position >= 0.15);
+
+        // STOP in a later track must return to the start of the side, otherwise
+        // the deck reads it as a pause and the arm stays on the record.
+        session.seek(1.3);
+        wait_until(|| session.state().track_index == 1 && session.state().position >= 1.25);
+        session.stop();
+        wait_until(|| {
+            let state = session.state();
+            state.loaded && !state.loading
+        });
+        let state = session.state();
+        assert!(!state.playing);
+        assert!(state.position <= 0.05, "position after stop {}", state.position);
+        assert_eq!(state.track_index, 0);
         fs::remove_dir_all(&dir).ok();
     }
 

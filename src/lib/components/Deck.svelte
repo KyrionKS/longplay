@@ -234,6 +234,8 @@
     if (playing) armPlaced = true;
     if (atEnd) armPlaced = false;
     if (stopped && !liftUp) armPlaced = false;
+    // A side that reloads (STOP from a later track) sends the arm home lifted.
+    if (loading && !cuePhase && !liftUp) armPlaced = false;
     if (cuePhase === "lower") armPlaced = true;
     // A stop must win over a pending cue badge, otherwise the arm stays on the
     // record and the readout keeps the cue time.
