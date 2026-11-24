@@ -91,11 +91,18 @@
       platterRadius = platterRect.width / 2;
     };
 
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(stage);
-    observer.observe(platter);
-    return () => observer.disconnect();
+    // The platter can move without changing size: the text block below it
+    // (title, time, track name) changes height and the flex layout re-centres
+    // the platter. A resize observer misses that, which left the arm geometry
+    // anchored to a stale centre. Re-measure every frame; assigning an equal
+    // value to a $state does not trigger anything.
+    let frame = 0;
+    const tick = () => {
+      measure();
+      frame = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(frame);
   });
 
   const REFERENCE_MM = 151;
