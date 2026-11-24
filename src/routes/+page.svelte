@@ -28,6 +28,7 @@
   let cueToken = 0;
   let startPending = $state(false);
   let liftUp = $state(false);
+  let liftPaused = $state(false);
   let armMoving = $state(false);
   let armHold = $state(false);
   let pendingCueTime = $state<number | null>(null);
@@ -197,6 +198,7 @@
     armMoving = false;
     armHold = false;
     pendingCueTime = null;
+    liftPaused = false;
   }
 
   const ready = $derived(!!loadedState && !loadedState.loading);
@@ -295,6 +297,7 @@
     if (!state?.loaded || state.loading) return;
     if (state.playing) {
       liftUp = true;
+      liftPaused = true;
       pendingCueTime = null;
       void pausePlayback();
       return;
@@ -302,17 +305,20 @@
     if (liftUp) {
       // Lowering the needle: drop first, then continue at the arm position.
       const time = pendingCueTime;
+      const resume = liftPaused;
       liftUp = false;
+      liftPaused = false;
       pendingCueTime = null;
       if (time !== null) {
         void cuePlayback(time);
-      } else if (paused) {
+      } else if (resume) {
         void lowerPlayback();
       }
       return;
     }
     // Stopped side: lift the arm from the rest so it can be placed by hand.
     liftUp = true;
+    liftPaused = false;
     pendingCueTime = null;
   }
 
@@ -351,6 +357,7 @@
       grooves={loadedState?.grooves ?? []}
       cuePhase={cuePhase}
       liftUp={liftUp}
+      liftPaused={liftPaused}
       busy={armMoving}
       hold={armHold}
       onSide={changeSide}

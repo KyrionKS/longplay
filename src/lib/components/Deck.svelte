@@ -13,6 +13,7 @@
     grooves: GrooveBand[];
     cuePhase?: "swing" | "lower" | null;
     liftUp?: boolean;
+    liftPaused?: boolean;
     busy?: boolean;
     hold?: boolean;
     onSide: (index: number) => void;
@@ -31,6 +32,7 @@
     grooves,
     cuePhase = null,
     liftUp = false,
+    liftPaused = false,
     busy = false,
     hold = false,
     onSide,
@@ -148,7 +150,9 @@
     if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
     if (cuePhase) return cueTargetPhi;
-    if (stopped) return REST_PHI;
+    // A lifted lever is a pause, even at position 0 during the lead-in; only a
+    // real stop sends the arm home.
+    if (stopped && !liftUp) return REST_PHI;
     if (atEnd) return REST_PHI;
     if (!armPlaced && !playing) return REST_PHI;
     return PIVOT_ANGLE + Math.PI - playback.armAngle;
@@ -162,7 +166,7 @@
   });
 
   const homing = $derived(
-    (stopped || atEnd || loading) &&
+    ((stopped && !liftUp) || atEnd || loading) &&
       !cuePhase &&
       !armPlaced &&
       Math.abs(armPhi - REST_PHI) > 0.03,
@@ -177,7 +181,7 @@
 
   $effect(() => {
     const spinning =
-      playing || dragging || !!cueHold || (liftUp && !stopped);
+      playing || dragging || !!cueHold || (liftUp && liftPaused);
     const target = spinning ? (Math.PI * 2) / (rpmValue === 45 ? 1.333 : 1.8) : 0;
     let frame = 0;
     let last = performance.now();
@@ -225,7 +229,7 @@
   $effect(() => {
     if (playing) armPlaced = true;
     if (atEnd) armPlaced = false;
-    if (stopped) armPlaced = false;
+    if (stopped && !liftUp) armPlaced = false;
     if (cuePhase === "lower") armPlaced = true;
     // A stop must win over a pending cue badge, otherwise the arm stays on the
     // record and the readout keeps the cue time.
