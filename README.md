@@ -50,7 +50,8 @@ und führt den Arm in die Ablage. Pause und Weiter macht der Cue-Hebel am Arm (o
 hoch hebt die Nadel, der Teller dreht weiter; runter setzt sie wieder auf. Die Tabs `A`/`B`
 wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
 Auf die Platte ziehen setzt die Nadel an der Stelle ab; beim Überfahren zeigt ein
-kleines Etikett den Track unter dem Zeiger. Beim Cueen in einen anderen Track bleibt
+kleines Etikett den Track unter dem Zeiger. Beim Absetzen ist immer der Nadel-Aufschlag
+zu hören, die Musik beginnt erst danach. Beim Cueen in einen anderen Track bleibt
 die Nadel sichtbar auf der Platte, während der Track nachlädt; der vorgeladene nächste
 Track springt sofort.
 

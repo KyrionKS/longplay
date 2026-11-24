@@ -140,11 +140,8 @@ impl CueVoice {
         low + (high - low) * self.random()
     }
 
-    /// Starts a new cue and returns the lead-in length in seconds.
-    pub fn start(&mut self, device_rate: u32) -> f32 {
+    fn prepare_needle(&mut self, device_rate: f32) {
         let samples = samples();
-        let device_rate = device_rate.max(1) as f32;
-
         self.needle_pos = 0.0;
         self.needle_step = samples.needle.rate as f32 / device_rate * self.between(0.96, 1.04);
         // The drop is almost pure low end (99 % below 200 Hz), so small
@@ -154,6 +151,13 @@ impl CueVoice {
         self.needle_presence = self.between(1.2, 1.4);
         self.needle_lp = 0.0;
         self.needle_active = !samples.needle.data.is_empty();
+    }
+
+    /// Starts the lead-in at the beginning of a side and returns its length.
+    pub fn start(&mut self, device_rate: u32) -> f32 {
+        let samples = samples();
+        let device_rate = device_rate.max(1) as f32;
+        self.prepare_needle(device_rate);
 
         let length = samples.surface.data.len() as f32;
         self.surface_pos = if length > 0.0 {
@@ -162,14 +166,24 @@ impl CueVoice {
             0.0
         };
         self.surface_step = samples.surface.rate as f32 / device_rate * self.between(0.98, 1.02);
-        // The bundled blank-groove recording is normalized to -45 dBFS RMS, so
-        // it sits well below the music without further attenuation. Only vary
-        // it slightly between starts.
+        // The bundled surface recording is normalized to -45 dBFS RMS, so it
+        // sits well below the music without further attenuation.
         self.surface_gain = self.between(0.92, 1.06);
         self.surface_left = 2.0 + 2.0 * self.random();
         self.surface_ramp = 0.0;
 
         self.surface_left
+    }
+
+    /// A manual cue places the needle by hand: play the drop only, then the
+    /// music, without the lead-in static.
+    pub fn start_drop(&mut self, device_rate: u32) -> f32 {
+        let device_rate = device_rate.max(1) as f32;
+        self.prepare_needle(device_rate);
+        self.surface_left = 0.0;
+        self.surface_ramp = 0.0;
+        let samples = samples();
+        (samples.needle.data.len() as f32 / samples.needle.rate.max(1) as f32).max(0.1)
     }
 
     /// Renders the cue. Call once per output frame while the lead-in runs.

@@ -64,6 +64,7 @@ pub struct Engine {
     character: AtomicU32,
     needle_pre_roll: AtomicBool,
     suppress_pre_roll: AtomicBool,
+    cue_drop: AtomicBool,
     runout_seconds: AtomicU32,
     track_index: AtomicU64,
     side_start: AtomicU64,
@@ -96,6 +97,7 @@ impl Engine {
             character: AtomicU32::new(0.3f32.to_bits()),
             needle_pre_roll: AtomicBool::new(false),
             suppress_pre_roll: AtomicBool::new(false),
+            cue_drop: AtomicBool::new(false),
             runout_seconds: AtomicU32::new(RUNOUT_SECONDS.to_bits()),
             track_index: AtomicU64::new(0),
             side_start: AtomicU64::new(0.0f64.to_bits()),
@@ -236,8 +238,13 @@ impl Engine {
         self.needle_pre_roll.store(enabled, Ordering::Relaxed);
     }
 
-    /// Manual cueing places the needle by hand, so the next start must not
-    /// replay the lead-in drop and static.
+    /// Manual cueing places the needle by hand: play the drop, but not the
+    /// lead-in static.
+    pub fn request_cue_drop(&self) {
+        self.cue_drop.store(true, Ordering::Relaxed);
+    }
+
+    /// Suppresses the next lead-in completely (a plain seek, no drop).
     pub fn suppress_next_pre_roll(&self) {
         self.suppress_pre_roll.store(true, Ordering::Relaxed);
     }
@@ -351,9 +358,10 @@ impl Engine {
             return;
         }
 
-        // Consume a queued cue suppression even if playback is already running,
-        // so it cannot leak into the next real start.
+        // Consume queued start hints even if playback is already running, so
+        // they cannot leak into the next real start.
         let suppressed = self.suppress_pre_roll.swap(false, Ordering::Relaxed);
+        let cue_drop = self.cue_drop.swap(false, Ordering::Relaxed);
 
         let device_rate = device_rate.max(1);
         let base_rate = f64::from(load_f32(&self.rate))
@@ -371,7 +379,11 @@ impl Engine {
             // The lead-in belongs to the start of the side, not to the start of
             // every track: a cue into track 3 must not replay the static.
             let at_side_start = self.side_position_seconds() <= 0.05;
-            if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) && !suppressed {
+            if cue_drop {
+                // Placing the needle by hand: the drop plays, then the music.
+                let seconds = dsp.cue.start_drop(device_rate);
+                dsp.pre_roll = (f64::from(seconds) * f64::from(device_rate)) as u64;
+            } else if at_side_start && self.needle_pre_roll.load(Ordering::Relaxed) && !suppressed {
                 // Let the needle land and the lead-in groove run before the
                 // first note. The track position stays put during this pre-roll.
                 let seconds = dsp.cue.start(device_rate);
@@ -574,7 +586,23 @@ mod tests {
     }
 
     #[test]
-    fn a_manual_cue_suppresses_the_next_lead_in() {
+    fn a_manual_cue_plays_only_the_drop() {
+        let engine = Engine::new();
+        engine.set_needle_pre_roll(true);
+        engine.load_track(track(1.0, 440.0, 0.5), 0.0);
+        engine.request_cue_drop();
+        engine.play();
+        let mut dsp = DspState::new();
+        render(&engine, &mut dsp, 480);
+        assert!(dsp.pre_roll > 0, "a manual cue plays the drop");
+        assert!(
+            dsp.pre_roll <= 48_000 / 2,
+            "but not the multi-second lead-in static"
+        );
+    }
+
+    #[test]
+    fn a_plain_seek_does_not_play_a_drop() {
         let engine = Engine::new();
         engine.set_needle_pre_roll(true);
         engine.load_track(track(1.0, 440.0, 0.5), 0.0);
@@ -582,7 +610,7 @@ mod tests {
         engine.play();
         let mut dsp = DspState::new();
         render(&engine, &mut dsp, 480);
-        assert_eq!(dsp.pre_roll, 0, "a manual cue places the needle by hand");
+        assert_eq!(dsp.pre_roll, 0);
     }
 
     #[test]
