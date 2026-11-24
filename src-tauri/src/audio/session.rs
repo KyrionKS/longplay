@@ -244,7 +244,7 @@ impl Session {
         let Some(timeline) = self.timeline.lock().ok().and_then(|slot| slot.clone()) else {
             return;
         };
-        let at_end = self.engine.side_position_seconds() >= timeline.total - 0.05;
+        let at_end = self.engine.side_position_seconds() >= timeline.total - 0.08;
         if at_end && !self.engine.is_playing() {
             self.restart_side();
             return;

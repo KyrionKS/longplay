@@ -108,13 +108,20 @@
           context.stroke();
         }
       } else if (band.kind === "gap") {
-        // The land is almost invisible; the bright edge of the following
-        // track marks the actual start of the song.
+        // The land between songs is smooth, ungrooved lacquer: a darker, glossy
+        // band with a faint edge on each side so it reads as a gap.
         context.beginPath();
         context.arc(center, center, (outer + inner) / 2, 0, tau);
-        context.strokeStyle = "rgba(0,0,0,0.05)";
-        context.lineWidth = Math.max(0.8, bandWidth);
+        context.strokeStyle = "rgba(0,0,0,0.38)";
+        context.lineWidth = bandWidth;
         context.stroke();
+        for (const edge of [outer, inner]) {
+          context.beginPath();
+          context.arc(center, center, edge, 0, tau);
+          context.strokeStyle = "rgba(255,255,255,0.18)";
+          context.lineWidth = 0.6;
+          context.stroke();
+        }
       } else {
         for (let radius = outer; radius > inner; radius -= 2.4) {
           context.beginPath();

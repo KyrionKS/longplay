@@ -143,6 +143,10 @@
   });
 
   let armPlaced = $state(false);
+  // A drag only counts once the pointer touched the record at least once;
+  // otherwise `manualPhi`/`cueTime` are stale values from an earlier drag.
+  let dragHit = false;
+  let armPlacedBeforeDrag = false;
 
   const statePhi = $derived.by(() => {
     if (dragging) return manualPhi;
@@ -315,6 +319,7 @@
     if (!info || !playback) return;
     const point = cuePointForRadius(playback.grooves, info.radius);
     if (!point) return;
+    dragHit = true;
     cueTime = point.time;
     cueTrackIndex = point.trackIndex;
     cueX = info.x;
@@ -342,8 +347,11 @@
 
   function onPointerDown(event: PointerEvent) {
     // Like a real deck: the arm only moves while the cue lever holds it up.
+    if (event.button !== 0 || !event.isPrimary) return;
     if (busy || !liftUp || !album || !side || !playback?.loaded || loading) return;
     dragging = true;
+    dragHit = false;
+    armPlacedBeforeDrag = armPlaced;
     armPlaced = true;
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
     updateCue(event);
@@ -362,6 +370,10 @@
     if (!dragging) return;
     dragging = false;
     hoverTrackIndex = null;
+    if (!dragHit) {
+      armPlaced = armPlacedBeforeDrag;
+      return;
+    }
     if (busy) return;
     // The arm stays lifted where it was placed; lowering the lever starts the
     // playback there and plays the needle drop.

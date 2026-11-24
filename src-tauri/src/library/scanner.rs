@@ -31,6 +31,8 @@ pub struct ScanSummary {
 pub enum ScanError {
     #[error(transparent)]
     Db(#[from] super::db::DbError),
+    #[error("Kein Musikordner erreichbar (nicht eingehängt oder gelöscht?). Bibliothek bleibt unverändert.")]
+    NoRoots,
 }
 
 #[derive(Debug, Clone)]
@@ -77,6 +79,10 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
     // parent. Walk every physical folder only once, otherwise the same album is
     // built two times and the id collides on insert.
     let roots = unique_roots(roots);
+    // Never replace the library with an empty scan because a drive is missing.
+    if roots.is_empty() {
+        return Err(ScanError::NoRoots);
+    }
 
     let mut audio_files = Vec::new();
     let mut cue_files = Vec::new();

@@ -104,7 +104,7 @@ impl GrooveLayout {
         // Each track gets a land before it. A real pregap gets a wider land;
         // a gapless boundary gets a hairline so the following track does not
         // drift inwards. The lands are subtracted from the music area.
-        let base_land = if single { 0.2 } else { 0.25 };
+        let base_land = if single { 0.8 } else { 1.0 };
         let mut gap_widths: Vec<f64> = timeline
             .tracks
             .iter()
@@ -113,7 +113,7 @@ impl GrooveLayout {
                 if index == 0 && track.pregap <= 0.01 {
                     0.0
                 } else if track.pregap > 0.01 {
-                    (0.25 + track.pregap * 0.35).clamp(0.4, 1.4)
+                    (1.2 + track.pregap * 0.6).clamp(1.5, 3.0)
                 } else {
                     base_land
                 }
@@ -285,8 +285,9 @@ mod tests {
         assert_eq!(lands.len(), 2);
         let pause = lands[0].start - lands[0].end;
         let gapless = lands[1].start - lands[1].end;
-        assert!((0.6..=1.0).contains(&pause), "pause land {pause}");
-        assert!(gapless <= 0.3, "gapless land {gapless}");
+        assert!((1.5..=3.0).contains(&pause), "pause land {pause}");
+        assert!((0.5..=1.2).contains(&gapless), "gapless land {gapless}");
+        assert!(pause > gapless);
     }
 
     #[test]
