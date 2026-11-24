@@ -8,9 +8,12 @@
   import { addMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
   import {
     loadSide,
+    pausePlayback,
     playback,
+    playPlayback,
     refreshPlayback,
     setRpm,
+    stopPlayback,
     togglePlayback,
   } from "$lib/playback.svelte";
   import type { Album, SortKey } from "$lib/types";
@@ -22,6 +25,7 @@
   let cuePhase = $state<"swing" | "lower" | null>(null);
   let cueToken = 0;
   let startPending = $state(false);
+  let liftUp = $state(false);
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -120,6 +124,12 @@
       if (event.code === "Space") {
         event.preventDefault();
         toggle();
+        return;
+      }
+      if (event.key === "l" || event.key === "L") {
+        event.preventDefault();
+        toggleLift();
+        return;
       }
       const digit = Number(event.key);
       if (digit >= 1 && digit <= 9) {
@@ -149,6 +159,7 @@
 
   function select(album: Album) {
     cancelCue();
+    liftUp = false;
     selectedId = album.id;
     sideIndex = 0;
     gatefoldOpen = false;
@@ -159,6 +170,7 @@
   function changeSide(index: number) {
     if (!selected) return;
     cancelCue();
+    liftUp = false;
     const wasPlaying = !!playback.state?.playing;
     sideIndex = index;
     void loadSide(selected.id, index, wasPlaying);
@@ -172,6 +184,14 @@
 
   const ready = $derived(!!loadedState && !loadedState.loading);
 
+  const paused = $derived(
+    !!loadedState &&
+      !loadedState.playing &&
+      !loadedState.loading &&
+      loadedState.position > 0.05 &&
+      (loadedState.duration <= 0 || loadedState.position < loadedState.duration - 0.08),
+  );
+
   $effect(() => {
     if (startPending && ready && !cuePhase) {
       startPending = false;
@@ -182,8 +202,8 @@
   async function toggle() {
     if (!selected || cuePhase) return;
     const state = playback.state;
-    if (state?.playing) {
-      void togglePlayback();
+    if (state?.playing || paused) {
+      await stopSide();
       return;
     }
     if (!ready) {
@@ -195,23 +215,45 @@
     await beginStart();
   }
 
+  async function stopSide() {
+    cancelCue();
+    liftUp = false;
+    await stopPlayback();
+  }
+
   async function beginStart() {
     if (!selected || cuePhase) return;
     const state = playback.state;
     if (!state?.loaded || state.loading) return;
+    liftUp = false;
+    const token = ++cueToken;
     const atEnd = state.duration > 0 && state.position >= state.duration - 0.08;
     const atStart = state.position <= 0.05;
     if (atStart || atEnd) {
-      const token = ++cueToken;
       cuePhase = "swing";
       await new Promise((resolve) => setTimeout(resolve, 1400));
       if (token !== cueToken) return;
       cuePhase = "lower";
       await new Promise((resolve) => setTimeout(resolve, 450));
       if (token !== cueToken) return;
-      cuePhase = null;
     }
     await togglePlayback();
+    if (token === cueToken) cuePhase = null;
+  }
+
+  function toggleLift() {
+    if (!selected || cuePhase) return;
+    const state = playback.state;
+    if (!state?.loaded || state.loading) return;
+    if (state.playing) {
+      liftUp = true;
+      void pausePlayback();
+      return;
+    }
+    if (paused) {
+      liftUp = false;
+      void playPlayback();
+    }
   }
 
   function changeRpm(rpm: number) {
@@ -247,8 +289,10 @@
       playback={playback.state}
       grooves={loadedState?.grooves ?? []}
       cuePhase={cuePhase}
+      liftUp={liftUp}
       onSide={changeSide}
       onToggle={toggle}
+      onLift={toggleLift}
       onRpm={changeRpm}
       onCover={() => {
         gatefoldOpen = true;

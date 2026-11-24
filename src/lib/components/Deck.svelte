@@ -12,8 +12,10 @@
     playback: PlaybackState | null;
     grooves: GrooveBand[];
     cuePhase?: "swing" | "lower" | null;
+    liftUp?: boolean;
     onSide: (index: number) => void;
     onToggle: () => void;
+    onLift: () => void;
     onRpm: (rpm: number) => void;
     onCover: () => void;
   }
@@ -25,8 +27,10 @@
     playback,
     grooves,
     cuePhase = null,
+    liftUp = false,
     onSide,
     onToggle,
+    onLift,
     onRpm,
     onCover,
   }: Props = $props();
@@ -41,6 +45,17 @@
   const duration = $derived(playback?.duration ?? 0);
   const atEnd = $derived(
     !!playback && duration > 0 && !playback.playing && position >= duration - 0.08,
+  );
+  const paused = $derived(
+    !!playback?.loaded &&
+      !playback.loading &&
+      !playback.playing &&
+      position > 0.05 &&
+      (duration <= 0 || position < duration - 0.08),
+  );
+  const active = $derived(playing || paused);
+  const stopped = $derived(
+    !!playback?.loaded && !playback.loading && !playback.playing && position <= 0.05,
   );
 
   const REST_PHI = 1.5;
@@ -120,25 +135,38 @@
   });
 
   let armPlaced = $state(false);
-  const armLift = $derived(cuePhase === "swing" ? -6 : 0);
 
   const statePhi = $derived.by(() => {
     if (dragging) return manualPhi;
     if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
     if (cuePhase) return cueTargetPhi;
+    if (stopped) return REST_PHI;
     if (atEnd) return REST_PHI;
     if (!armPlaced && !playing) return REST_PHI;
     return PIVOT_ANGLE + Math.PI - playback.armAngle;
   });
 
   let armPhi = $state(REST_PHI);
+
+  const homing = $derived(
+    (stopped || atEnd) &&
+      !cuePhase &&
+      !armPlaced &&
+      Math.abs(armPhi - REST_PHI) > 0.03,
+  );
+
+  const armLift = $derived(
+    cuePhase === "swing" || (liftUp && !stopped) || homing ? -6 : 0,
+  );
+
   let platterAngle = $state(0);
   let platterVelocity = 0;
 
   $effect(() => {
-    const active = playing || dragging || !!cueHold;
-    const target = active ? (Math.PI * 2) / (rpmValue === 45 ? 1.333 : 1.8) : 0;
+    const spinning =
+      playing || dragging || !!cueHold || (liftUp && !stopped);
+    const target = spinning ? (Math.PI * 2) / (rpmValue === 45 ? 1.333 : 1.8) : 0;
     let frame = 0;
     let last = performance.now();
 
@@ -180,6 +208,7 @@
   $effect(() => {
     if (playing) armPlaced = true;
     if (atEnd) armPlaced = false;
+    if (stopped) armPlaced = false;
     if (cuePhase === "lower") armPlaced = true;
   });
 
@@ -239,6 +268,8 @@
   const restY = $derived(pivotY + Math.sin(REST_PHI) * armLengthPx);
   const weightX = $derived(pivotX - Math.cos(armPhi) * armLengthPx * 0.24);
   const weightY = $derived(pivotY - Math.sin(armPhi) * armLengthPx * 0.24);
+  const leverBaseX = $derived(pivotX + armLengthPx * 0.06);
+  const leverBaseY = $derived(pivotY + armLengthPx * 0.1);
 
   function pointerInfo(event: PointerEvent) {
     if (!stageEl || !platterEl || mmToPx <= 0) return null;
@@ -525,6 +556,14 @@
             stroke="rgba(255,255,255,0.5)"
             stroke-width="1.6"
           />
+        </g>
+
+        <g
+          class="cue-lever"
+          class:raised={liftUp}
+          style:transform={`rotate(${liftUp ? -26 : 0}deg)`}
+          style:transform-origin={`${leverBaseX}px ${leverBaseY}px`}
+        >
           <path
             d={`M ${pivotX + armLengthPx * 0.06} ${pivotY + armLengthPx * 0.1} L ${pivotX + armLengthPx * 0.115} ${pivotY + armLengthPx * 0.165}`}
             stroke="#bdbdbd"
@@ -700,20 +739,34 @@
         </g>
       </g>
     </svg>
+
+    <button
+      class="cue-lever-button"
+      type="button"
+      aria-pressed={liftUp}
+      aria-disabled={!active}
+      aria-label={liftUp ? "Tonarm senken" : "Tonarm anheben"}
+      title={liftUp ? "Tonarm senken (Weiter)" : "Tonarm anheben (Pause)"}
+      style:left={`${leverBaseX - armLengthPx * 0.03}px`}
+      style:top={`${leverBaseY - armLengthPx * 0.035}px`}
+      style:width={`${armLengthPx * 0.16}px`}
+      style:height={`${armLengthPx * 0.18}px`}
+      onclick={onLift}
+    ></button>
   </div>
 
   <div class="controls">
     <button
       class="start"
       class:ready={!!album && !loading}
-      class:playing
+      class:playing={active}
       type="button"
       disabled={!album}
       onclick={onToggle}
-      title={playing ? "Wiedergabe anhalten" : "Platte starten"}
+      title={active ? "Wiedergabe stoppen, Arm in die Ablage" : "Platte starten"}
     >
-      <span class="primary">{playing ? "STOP" : "START"}</span>
-      <span class="sub">{playing ? "START" : "STOP"}</span>
+      <span class="primary">{active ? "STOP" : "START"}</span>
+      <span class="sub">{active ? "START" : "STOP"}</span>
     </button>
 
     <div class="rpm" role="group" aria-label="Drehzahl">
@@ -995,6 +1048,48 @@
     height: 100%;
     overflow: visible;
     pointer-events: none;
+  }
+
+  .cue-lever {
+    pointer-events: none;
+    transform-box: view-box;
+    transition: transform 180ms ease;
+  }
+
+  .cue-lever.raised path {
+    stroke: #efefef;
+  }
+
+  .cue-lever-button {
+    position: absolute;
+    z-index: 4;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .cue-lever-button:hover {
+    background: radial-gradient(
+      circle at 40% 35%,
+      rgba(255, 240, 210, 0.18),
+      rgba(255, 240, 210, 0.04) 55%,
+      transparent 72%
+    );
+  }
+
+  .cue-lever-button:focus-visible {
+    outline: 2px solid rgba(232, 207, 122, 0.85);
+    outline-offset: 2px;
+  }
+
+  .cue-lever-button[aria-disabled="true"] {
+    cursor: default;
+  }
+
+  .cue-lever-button[aria-disabled="true"]:hover {
+    background: transparent;
   }
 
   .cue-badge,

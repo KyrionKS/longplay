@@ -267,6 +267,17 @@ Scratchen ist nicht im Scope. Der Tonarm wird gezogen, um zu cueen:
 - Aufsetzen: kurzer Nadel-Fall-Thump, dann Wiedergabe ab der Position.
 - Seitenende: Auslaufrille mit Locked-Groove-Thump, Auto-Return in die Ablage.
 
+### Start, Stop, Pause
+
+- **START** aus dem Stand: der Arm schwenkt aus der Ablage zur ersten Rille, senkt sich,
+  die Wiedergabe beginnt.
+- **STOP**: Audio hält an, die Position springt auf 0, der Arm hebt ab und schwenkt zurück
+  in die Ablage, der Teller läuft aus. Nächstes START beginnt die Seite von vorn.
+- **Pause** über den Cue-Hebel am Arm: Hebel hoch hebt den Arm um wenige Pixel (Audio
+  pausiert, Position bleibt, der Teller dreht weiter), Hebel runter senkt ihn und setzt fort.
+- Der START/STOP-Button zeigt STOP, solange die Seite läuft oder pausiert ist; weiter geht
+  es ausschließlich über den Hebel. Tasten: Leertaste START/STOP, `L` Cue-Hebel.
+
 ## 9. Optik
 
 ### Layout (1280 × 900, min. 1100 × 760)

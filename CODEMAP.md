@@ -1,86 +1,88 @@
-Stand: 3f7a296
+Stand: d94028da7a56279249ab90d82f17ed3c099812e8
 
 # Longplay — Codemap
 
 ## 1. Zweck + Stack
-Skeuomorpher Plattenspieler für lokale Musikdateien: Alben als Platten in einer Holzkiste, Tonarm von Hand aufsetzen, 33/45, A/B-Seiten (README.md:3-9).
-Tauri 2 + SvelteKit mit `adapter-static`/SPA (`ssr=false`) als dünne UI über einem Rust-Kern (svelte.config.js:12-14, src/routes/+layout.ts:5, README.md:33-35).
-Rust-Crates: lofty, rusqlite, symphonia, cpal (nur non-Linux), image, blake3, walkdir (src-tauri/Cargo.toml:24-32,43-44); Edition 2024 (:6).
+Skeuomorpher Plattenspieler für die lokale Sammlung: Alben als Platten in einer Holzkiste, Tonarm von Hand aufsetzen, 33⅓/45, Seiten A/B, Knistern (README.md:6-9).
+Tauri 2 + SvelteKit mit `adapter-static`/SPA ohne SSR (svelte.config.js:12-14, src/routes/+layout.ts:5); der Rust-Kern hält Index, Audio und Playback-Modell, die Webview ist Präsentationsschicht (src-tauri/src/lib.rs:3-4).
+Crates: lofty, walkdir, blake3, rusqlite (bundled), image, symphonia, arc-swap; Edition 2024 (src-tauri/Cargo.toml:6-32); cpal nur außerhalb Linux (src-tauri/Cargo.toml:44).
+Frontend: Svelte 5, TypeScript, Vite (package.json:16-31), Port 1430 mit `strictPort` (vite.config.js:18-21).
 
 ## 2. Befehle
-- `npm run tauri dev` startet Vite (via `beforeDevCommand`) + Tauri-App (README.md:44, src-tauri/tauri.conf.json:7-8).
-- `npm run dev` allein: Vite auf Port 1430, `strictPort`, Host 127.0.0.1 oder `TAURI_DEV_HOST`; HMR 1431 nur mit letzterem (package.json:7, vite.config.js:5,19-27).
-- `npm run build` = Vite/SvelteKit-Build nach `build/`; komplettes App-Bundle via `npm run tauri build` (package.json:8, README.md:73,80, tauri.conf.json:9-10).
-- `npm run check` = `svelte-kit sync` + `svelte-check` (package.json:11); `npm run preview` (package.json:9).
-- Rust-Tests: `cargo test --manifest-path src-tauri/Cargo.toml` (README.md:74); kein Watch-/Frontend-Testskript (package.json:6-13).
+- `npm run tauri dev`: startet Vite + App (`beforeDevCommand`, `devUrl`) (src-tauri/tauri.conf.json:6-10).
+- `npm run dev` allein: 127.0.0.1 oder `TAURI_DEV_HOST`, HMR 1431 nur mit Host (vite.config.js:5,19-31).
+- `npm run build` = Vite-Build nach `build/`; Bundle via `npm run tauri build` (package.json:8, src-tauri/tauri.conf.json:6-10).
+- `npm run check` = `svelte-kit sync` + `svelte-check` (package.json:11).
+- Rust-Tests: `cargo test --manifest-path src-tauri/Cargo.toml` (README.md:98).
 
-## 3. Verzeichnis-/Modulkarte
-- `src/routes/+page.svelte` (224): Gesamtlayout, Albumauswahl, clientseitige Suche/Sortierung, 9 Alben/Seite (`:51`), 250-ms-Polling (`:75-102`), Handler (`:115-135`).
-- `src/routes/+layout.ts` (5): `ssr=false`.
-- `src/lib/types.ts` (90): IPC-DTOs, 1:1 zu Serde-CamelCase.
-- `src/lib/library.svelte.ts` (79): Library-Store, Ordnerdialog/Scan (`:18-68`), `coverUrl` via `convertFileSrc` (`:70-72`).
-- `src/lib/playback.svelte.ts` (77): invoke-Wrapper für alle Playback-Commands, `formatClock` (`:73`).
-- `src/lib/groove.ts` (48): Frontend-Tonarmwinkel und Radius→Cue-Zeit (`:4-13`, `:22-47`).
-- `src/lib/theme.css` (61): Farb-/Font-Variablen (`:2-19`).
-- `src/lib/components/Crate.svelte` (450): Kiste, Suche, Sortierschalter, Pager (`:89-117`), 3×3-Raster (`:47-48`, `:140`).
-- `src/lib/components/Sleeve.svelte` (161): Coverkarte (`:7`), CSS-Farben aus Palette (`:15-17`), Fallback (`:25-28`).
-- `src/lib/components/Deck.svelte` (892): Plattenspieler, Tonarm-Ziehen/Cue (`:196-258`), rAF-Animation von Teller und Arm (`:104-174`).
-- `src/lib/components/Vinyl.svelte` (353): Platte, Canvas-Rillen aus `GrooveBand` (`:45-100`).
-- `src/lib/components/WoodBackground.svelte` (62): statischer Holz-Hintergrund (`:2-3`).
-- `src-tauri/src/lib.rs` (197): `AppState` (`:21-25`), 12 Tauri-Commands (`:28-142`, Registrierung `:181-194`), Setup/DB/Audio (`:145-196`).
-- `src-tauri/src/audio/session.rs` (648): Orchestrierung: Laden (`:169-221`), Prefetch (`:142-167`), Conductor (`:114-120`), PlaybackState (`:353-431`).
-- `src-tauri/src/audio/engine.rs` (700): Echtzeit-DSP, Position, Auto-Advance (`:237-249`), Limiter (`:421`).
-- `src-tauri/src/audio/decode.rs` (340): symphonia-Decode eines Tracks inkl. Pregap (`:131`).
-- `src-tauri/src/audio/resample.rs` (150): Catmull-Rom (`:7`); `noise.rs` (130): Knacken/Rumpeln (`:44`); `output.rs` (108): cpal (`:14`) bzw. Null-Sink (`:96`).
-- `src-tauri/src/audio/timeline.rs` (215): Seite → Track-Spans (`:34`); `groove.rs` (335): mm-Rillenlayout (`:92`), Zeit↔Radius (`:74`).
-- `src-tauri/src/library/scanner.rs` (818): rekursiver Scan (`:70`, `:123`), Seiten-/Format-Heuristik (`:511`, `:425`).
-- `src-tauri/src/library/cue.rs` (845): CUE-Parser, Bytes/Text (`:85`, `:103`).
-- `src-tauri/src/library/db.rs` (256): SQLite (`:45`, `:74`, `:104`); `model.rs` (148): Album/Side/Track/Palette (`:7`); `metadata.rs` (90): lofty (`:35`); `artwork.rs` (87): Cover (`:47`); `palette.rs` (207): Farben (`:12`).
-- `src-tauri/src/playback/geometry.rs` (206): Tonarmmaße und Winkel (`:36-52`); `platform/mod.rs` (1): nur Stub/Doc, keine Implementierung (ganze Datei).
+## 3. Modulkarte
+- `src-tauri/src/lib.rs`: `AppState` (DB, Cover-Ordner, Session) (lib.rs:21-25), 12 IPC-Commands inkl. `app_version` (lib.rs:28-142), Aufbau/Setup (lib.rs:145-197).
+- `library/scanner.rs`: Ordnerlauf, CUE-/Tag-/Playlist-Alben, Seiten- und Formatlogik (`scan` :71, `collect_files` :135, `group_key` :170, `build_from_files` :187, `build_playlist` :291, `build_from_cue` :402, `assemble` :543, `group_sides` :661, `split_index` :689).
+- `library/m3u.rs`: toleranter M3U/M3U8-Parser, liefert nie Fehler (m3u.rs:2-6, `parse` :28).
+- `library/model.rs`: Serde-DTOs in camelCase (model.rs:7-27), `DiscFormat` (model.rs:37-45), `AlbumSource` (model.rs:47-53), `Side`/`Rpm` (model.rs:55-84), `Track`/`Palette` (model.rs:86-120).
+- `library/db.rs`: SQLite-Cache, Schema/Migration (db.rs:45-84), Schreiben/Lesen (db.rs:87-160), `album`/`folders` (db.rs:162-191).
+- `library/cue.rs`: CUE-Sheets inkl. Pregap und Einzeldatei-Offsets (cue.rs:43-60, `parse_bytes` :85).
+- `library/metadata.rs`: Tags via lofty (metadata.rs:35) und Dauer (metadata.rs:73); `artwork.rs`: Cover finden/einbetten/cachen (artwork.rs:24-59); `palette.rs`: Farben aus Cover (palette.rs:12-49).
+- `audio/session.rs`: lädt je einen Track, prefetcht den nächsten, liefert `PlaybackState` (session.rs:23-45, `tick` :126, `schedule_prefetch` :144, `load` :171, `state` :355); aktiviert den Einlauf in `new` (session.rs:96).
+- `audio/cue.rs`: WAV-Einlauf, eingebettet per `include_bytes!` (`samples` :33), minimaler 16-Bit-PCM-RIFF-Parser `parse_wav` :43, `CueVoice` :93 mit `start` :140 und `process` :164, lineare Interpolation `read_sample` :198. Fehlende/kaputte Dateien werden still zu `Sample::empty` (cue.rs:34-39).
+- `src-tauri/assets/audio/needle_drop.wav` und `vinyl_static.wav`: echte Mono-Aufnahmen (48 kHz/16 Bit), beide CC0. Nadel: HenKonen (Freesound #682161); Statik: „Vinyl Crackle (Real)“ von beautifuldaymonster1968 (Freesound #434822, CC0), 12 s; Herkunft, Kürzung und Pegel in `CREDITS.md`.
+- `audio/engine.rs`: DSP/Queue, `DspState` mit `cue`/`pre_roll` (engine.rs:21-28), `set_needle_pre_roll` (:223), `process_device` (:269), `process` (:311), Pre-Roll-Aufbau (:341-357), Cue-Rendering (:385-394), Musik plus Crackle/Rumble (:437-439); `decode.rs`: Symphonia→48 kHz (decode.rs:54,131).
+- `audio/timeline.rs`: Seitenzeit und Track-Spans (timeline.rs:34-97); `audio/groove.rs`: Rillenbänder in mm (groove.rs:1-8, `for_side` :92); `audio/noise.rs`: nur noch Crackle/Rumble, `process` :32, Crackle :41-53, Rumble :55-58; `audio/resample.rs`: Catmull-Rom/Varispeed (resample.rs:7,55).
+- `audio/output.rs`: cpal-Stream bzw. Linux-Nullsink (output.rs:14, 96).
+- `playback/geometry.rs`: Tonarmgeometrie, `cos(θ)=(d²+L²−r²)/(2dL)` (geometry.rs:6-7), `angle_for_radius` (:110); `playback/mod.rs` ist nur ein Doc-Stub (playback/mod.rs:1).
+- `src/routes/+page.svelte`: Layout, Auswahl, Tastatur, Polling, Cue-Sequenz (src/routes/+page.svelte:18-24, 81-137, 150-215).
+- `src/lib/components/Crate.svelte`: Kiste, Suche, Sortierung, Pager, 3×3 (Crate.svelte:6-36, 48-52, 139-165).
+- `Sleeve.svelte`: quadratische Hülle, Test-Pressing-Stempel (Sleeve.svelte:8, 25-47, 59-60), Wear/Spine/Grain/Shine (:49-53).
+- `Deck.svelte`: Teller, Tonarm, Ziehen und Cue (Deck.svelte:57-133, 243-320, 326-440), runder Teller (:814-815).
+- `Vinyl.svelte`: Rillen-Canvas, Label, Auflege-Animation `vinyl-in` (Vinyl.svelte:65, 157-219, 542-554); `Gatefold.svelte`: Cover groß, Vorder-/Rückseite (Gatefold.svelte:12-38, 54-136, 68-95); `WoodBackground.svelte`: Holz + SVG-Korn (WoodBackground.svelte:6-10, 23-38).
+- `src/lib/types.ts`: IPC-Typen (types.ts:1-92); `library.svelte.ts`/`playback.svelte.ts`: Stores + Invokes (library.svelte.ts:5-32, 34-68, 70-78; playback.svelte.ts:4-9, 11-71, 73-77); `groove.ts`: Radius↔Winkel/Cue (groove.ts:4-13, 22-48).
 
-## 4. Datenfluss/Architektur
-- UI ruft ausschließlich `invoke`: `library_load`/`library_folders` (src-tauri/src/lib.rs:33-49), `library_scan` (`:51-73`), Playback-Commands (`:75-142`).
-- Scan: Command → `spawn_blocking` → `scanner::scan` (lib.rs:59-72, scanner.rs:70); zuerst CUE-Alben, deren Dateien werden aus der Tag-Gruppierung entfernt (scanner.rs:81-90), danach Datei-Gruppen (`:92-108`), zum Schluss `db.replace_albums` (`:113`).
-- Abspielen: `playback_load` holt Album aus DB und ruft `Session::load` (lib.rs:75-101, session.rs:169); ein Thread dekodiert Track 0 (session.rs:205-219); der nächste Track wird bei Bedarf vorgeladen (session.rs:142-167).
-- Audio-Callback: `Engine::process` mischt Track, Varispeed, Noise, Limiter (engine.rs:299-420); am Track-Ende `advance()` auf den Prefetch-Puffer mit 20-ms-Fade (engine.rs:237-249,393); Conductor-Thread tickt alle 120 ms (session.rs:114-120).
-- Kein Event-Kanal: UI pollt `playback_state` alle 250 ms und spiegelt den Snapshot in den Store (+page.svelte:77-84, playback.svelte.ts:28-35, session.rs:353-431).
-- Persistenz: SQLite `app_data_dir/library.sqlite3` (lib.rs:156); `albums` speichert `palette`/`format`/`sides` als JSON-Text plus `folders` (db.rs:49-68). Cover als 512-px-JPEG in `app_cache_dir/covers` (lib.rs:150-153, artwork.rs:11,47-64).
-- Cover-Anzeige braucht Asset-Protokoll `$APPCACHE/**` (tauri.conf.json:29-33) und `convertFileSrc` (library.svelte.ts:70-72).
-- Tonarm: Backend liefert `stylusRadius`/`armAngle`/`grooves` (session.rs:390-421); Deck animiert auf den Zielwinkel oder auf die manuell gezogene Position (Deck.svelte:104-111,157-174) und mappt Zeigerradius auf Zeit (Deck.svelte:196-206,241-258).
-- Tellerrotation ist rein visuell: 1,8 s bzw. 1,333 s pro Umdrehung (Deck.svelte:118); die echte Position kommt aus dem Backend.
+## 4. Datenfluss
+1. Ordnerwahl oder Rescan → `library_scan` mit Ordnerliste (library.svelte.ts:34-68; lib.rs:52-74).
+2. `collect_files` trennt Dateien nach `.cue`, `.m3u/.m3u8` und Audio-Endungen (scanner.rs:135-168).
+3. Reihenfolge: CUE-Alben, dann Tag-Gruppen, dann Playlists (scanner.rs:83-122); `group_key` nutzt Album-Artist+Album, sonst Pfad (scanner.rs:170-185).
+4. `build_from_files` liest Cover (eingebettet vor Ordner) und jüngste mtime (scanner.rs:262-270); `assemble` verwirft Tracks ≤10 ms, baut Format, IDs und Seiten (scanner.rs:549, 566-620).
+5. Playlist: `m3u::parse` (m3u.rs:28), relative Pfade ab Playlist-Ordner, `#EXTINF`-Titel/-Dauer vor Tags (scanner.rs:291-355); Label „Test Pressing“ (scanner.rs:389), immer 12″ (scanner.rs:576-577). Cover: `cover.jpg/png` neben der `.m3u` gewinnt, sonst eingebettetes Bild des ersten Tracks, sonst dessen Ordner-Cover (scanner.rs:375-381; artwork.rs:24-35).
+6. DB: `replace_albums` schreibt Palette/Format/Sides/Source als JSON (db.rs:106-110), `load_albums` liest sie mit Fallbacks (db.rs:124-140); Spalte `source` default `"release"` inkl. ALTER-Migration (db.rs:62, 72-84).
+7. IPC: `library_load` liefert Alben, `playback_*` steuert die Session (lib.rs:34-142); Frontend pollt alle 250 ms (src/routes/+page.svelte:81-90).
+8. Audio: `playback_load` holt Album/Seite aus der DB (lib.rs:76-101); Conductor prüft alle 120 ms und prefetcht den Folgetrack (session.rs:116-169); Engine rendert, Ausgabe cpal/Nullsink (engine.rs:311, output.rs:96).
+9. Tonarm: Groove-Bänder → Radius, `cuePointForRadius` → Zeit (groove.ts:22-47); Ziehen setzt Nadel und ruft `playback_cue` (Deck.svelte:286-320).
+10. Auswahl: Klick auf die Hülle lädt nur die Seite (src/routes/+page.svelte:150-157), kein Hüllen-Flug; die Platte erscheint mit dem alten kurzen `vinyl-in`-Übergang, neu getriggert per `{#key}` (Deck.svelte:363-366; Vinyl.svelte:219, 542-554).
+11. Start-Sequenz: ein START-Klick während `loading` wird in `toggle` als `startPending` gemerkt und per `$effect` nachgeholt, sobald die Seite bereit ist (src/routes/+page.svelte:173-196); der Start-Knopf bleibt dazu auch beim Laden aktiv (Deck.svelte:711). An Anfang/Ende `cuePhase="swing"` 1400 ms → `"lower"` 450 ms → `togglePlayback` (src/routes/+page.svelte:202-215); Deck hebt den Arm (`armLift` :123), Ziel `cueTargetPhi` (:116-121), legt bei `"lower"` auf (:180-184). Engine startet dann einen zufälligen Einlauf von 2–4 s: `CueVoice::start` wählt Startposition (bis 40 % der 12-s-Statik-Aufnahme), Rate (0,96–1,04 bzw. 0,98–1,02) und Gain (0,78–1,08 Nadel, 0,78–1,06 Statik) neu (cue.rs:140-161); gerendert werden echter Nadel-Aufschlag plus Oberflächenstatik mit 20 ms Fade-in (cue.rs:164-185; engine.rs:385-394). Die Position bleibt stehen, danach folgt Musik mit prozeduralem Crackle/Rumble (engine.rs:341-357; noise.rs:41-58; aktiviert in session.rs:96).
 
-## 5. Wichtige Typen, Konstanten, Einstiegspunkte
-- `Album`/`Side`/`Track`/`Palette` camelCase (model.rs:7-111); `DiscFormat` lowercase `lp12|single7|unknown` (model.rs:34-39); `Rpm` als String `"33"|"45"` (model.rs:50-55).
-- `PlaybackState` (session.rs:24-45) entspricht `src/lib/types.ts:69-90`; `GrooveBand` (groove.rs:23-39) entspricht `types.ts:58-67`.
-- `ENGINE_RATE = 48000` (session.rs:20); Track-Fade 20 ms (engine.rs:18); Cover 512 px (artwork.rs:11); Tonarm 211/230 mm (geometry.rs:36-52); 12": 146→60 mm, 7": 84→45 mm (groove.rs:54-70).
-- Audio-Endungen `flac mp3 m4a aac wav aiff aif ogg opus alac` (scanner.rs:17-19).
-- Einstieg: `src-tauri/src/main.rs:4-6` → `longplay_lib::run` (lib.rs:145); Frontend `src/routes/+page.svelte`; App-HTML `src/app.html:1-14`.
+## 5. Typen und Einstiegspunkte
+- `Album`, `Side`, `Track`, `Palette`, `PlaybackState` sind 1:1 camelCase-DTOs (model.rs:7-27, 55-120; session.rs:23-45; types.ts:6-92).
+- `AlbumSource = release | playlist` (model.rs:47-53; types.ts:3,43); fehlendes Feld wird `release` (model.rs:20-22, 165-186).
+- Rust-Einstieg: `main()` → `longplay_lib::run()` (main.rs:5-6, lib.rs:145); UI-Einstieg: `+page.svelte` mit `loadLibrary()` (src/routes/+page.svelte:81-82).
+- `DiscFormat` steuert 7″/12″ und RPM (model.rs:37-45, 62-84; scanner.rs:566-581).
 
-## 6. Konfiguration/Dateipfade/Umgebungsvariablen
-- Tauri: devUrl `http://localhost:1430`, vor Dev/Build `npm run dev|build`, Frontend `../build` (tauri.conf.json:7-10); Fenster 1280×900, min. 1100×760, Overlay-Titlebar (tauri.conf.json:15-22).
-- Rechte: `core:default`, `dialog:default` für Fenster `main` (capabilities/default.json:5-11).
-- Vite ignoriert `src-tauri/**` im Watcher (vite.config.js:31); `TAURI_DEV_HOST` steuert Host/HMR (vite.config.js:5,21-27).
-- `LONGPLAY_SCAN_DIR` (Doppelpunkt-getrennt, `split_paths`) scannt beim Start ohne Ordnerdialog (lib.rs:160-169; README.md:54-57).
-- Pfade: DB `app_data_dir/library.sqlite3`, Cover `app_cache_dir/covers` (lib.rs:149-156).
-- SPA-Fallback `index.html` (svelte.config.js:12-14); Build-Artefakte `build/` und `.svelte-kit/` ignoriert (.gitignore:3-4).
+## 6. Konfiguration / ENV
+- Fenster 1280×900, Overlay-Titelleiste, Dark, Hintergrund `#1b100a` (tauri.conf.json:15-24).
+- Asset-Protokoll für `$APPCACHE/**`; Cover liegen in `app_cache_dir/covers` (tauri.conf.json:29-34; lib.rs:150-152).
+- DB: `app_data_dir/library.sqlite3`, WAL (lib.rs:155-156; db.rs:47).
+- `LONGPLAY_SCAN_DIR` scannt beim Start (Pfadtrenner via `split_paths`) (lib.rs:160-170; README.md:78-81).
+- Keine CSP gesetzt (tauri.conf.json:28); Font Caveat lokal (theme.css:1-7), Texturen in `static/textures/` (README.md:76).
+- Ton-Assets sind einkompiliert (`include_bytes!`, cue.rs:35-38), keine Tauri-Resources; Lizenztexte in `src-tauri/assets/audio/CREDITS.md` (README.md:121-130).
 
 ## 7. Gotchas
-- Scan ist **nicht inkrementell**: jede Datei wird erneut getaggt und `replace_albums` löscht alle Alben (scanner.rs:90-113, db.rs:74-77); PLAN.md:350 nennt das selbst offen, obwohl PLAN.md:32,149 es als Feature listet.
-- Kommentar-Drift: `audio/mod.rs:3-5` behauptet "ganze Seite in einem Puffer"; tatsächlich wird pro Track dekodiert (session.rs:208, decode.rs:131).
-- Album anklicken lädt Seite mit `autoplay=false` und pausiert/leert die laufende Wiedergabe (page.svelte:115-119, session.rs:176-181); Seitenwechsel behält dagegen `playing` (page.svelte:121-126).
-- Tonarmgeometrie existiert doppelt: Defaults 211/230 in `groove.ts:6-7` und `geometry.rs:36-52`. Nur eine Seite ändern bricht Cue/Anzeige.
-- Format-Heuristik: ≤2 Tracks und ≤600 s gelten automatisch als 7″/45 rpm (scanner.rs:425-434); das ändert Plattengröße, RPM und Geometrie.
-- Seiten ohne Hinweise werden an der zeitlich besten Trennung in A/B geteilt; Matrix ist synthetisch `LP-…` (scanner.rs:511-555,451).
-- Linux nutzt keinen cpal-Stream, sondern einen getakteten Null-Sink (output.rs:13,95-96); cpal ist Target-spezifische Dependency (Cargo.toml:43-44).
-- Keine Tauri-Events: nach jedem `invoke` muss die Antwort selbst in den Store; Polling ist die einzige Aktualisierung (playback.svelte.ts:11-71).
-- Fehler werden teils geschluckt: `refreshPlayback` ignoriert Exceptions, Audio-Startfehler landen nur in `error`/stderr (playback.svelte.ts:32-34, session.rs:98-112).
-- Cue auf fernen Track: UI hält die Nadel 900 ms per `cueHold` (Deck.svelte:141-147); prefetcht wird nur der direkt nächste Track (session.rs:142-167).
-- Suche/Sortierung laufen rein im Frontend über Titel/Interpret (page.svelte:22-47); kein FTS, obwohl PLAN.md:85 es vorsieht.
-- Album-IDs sind gekürzte blake3-Hashes aus Ordner|Titel|Interpret (scanner.rs:435-438,591-594); Pfadumbenennung erzeugt neue IDs.
+- Linux baut ohne cpal: ein Thread taktet die Engine als Nullsink, es kommt kein Ton heraus (output.rs:5-6, 95-96).
+- Der WAV-Parser akzeptiert nur PCM (Format 1) mit 16 Bit; alles andere fällt still auf Stille zurück (cue.rs:43-90).
+- Format ist nur Heuristik: ≤2 Tracks und ≤480 s → 7″ (scanner.rs:566-571); echte `RELEASETYPE`/`MEDIA`-Tags fehlen (PLAN.md:501-503).
+- Playlist-Tracks werden nicht aus den Release-Gruppen entfernt (`consumed` füllt nur CUE); derselbe Ordner erscheint zusätzlich als Album (scanner.rs:81-108).
+- `source` wird als JSON-String gespeichert, nicht als nackter Text (db.rs:110, 139).
+- Seitensplit: explizite Hinweise (CUE-Seite, Disc, `A1`-Präfix) gewinnen, sonst balancierte Hälften (scanner.rs:661-687, 689-704).
+- Hüllen sind quadratisch (`aspect-ratio: 1`), Platte/Teller rund (Sleeve.svelte:59-60; Deck.svelte:814-815; Vinyl.svelte:199-203).
+- Papierkante an Shelf-Hüllen ist entfernt; sichtbar sind nur Wear, Spine, Grain und Shine (Sleeve.svelte:49-53).
+- `prefers-reduced-motion` deaktiviert global alle Animationen/Transitions, damit auch `vinyl-in` (theme.css:63-70).
+- Start-Sequenz läuft nur an Anfang/Ende (Position ≤0,05 s bzw. letzte 0,08 s); Pause/Play sonst sofort; ein während `loading` geklickter START wartet und startet nach dem Laden selbst (src/routes/+page.svelte:173-215).
+- Der Start-Knopf ist während `loading` nicht deaktiviert, damit der erste Klick nicht verschluckt wird (Deck.svelte:711; src/routes/+page.svelte:189-193).
+- Der Einlauf kommt nur, wenn die Seite an Position 0 beginnt; Mitten-Cue und Seek überspringen ihn (engine.rs:341-357).
+- Playlist-Hüllen zeigen bei fehlendem Cover den Stempel „Test Pressing“, sonst das Cover mit Badge (Sleeve.svelte:8, 25-38; Gatefold.svelte:68-95).
 
 ## 8. Tests
-- Nur Rust: 93 `#[test]` in `src-tauri/src`; Schwerpunkte cue (22), engine (17), scanner (11), groove (9), geometry (7), session (5).
-- Abdeckung: CUE-Parsing/Encoding/Pregaps/Seitenhinweise, Tag-Scan und Seiten-Split, DB-Roundtrip, Palette/HSL, Resampler, Engine (Seek, Varispeed, Fades, Limiter, Auto-Advance), Session-Prefetch, Tonarm-/Rillengeometrie.
-- Ausführen: `cargo test --manifest-path src-tauri/Cargo.toml` (README.md:74); Session-Tests teilweise Linux-only (session.rs:439,535).
-- Scanner-Tests schreiben echte WAVs in Temp-Verzeichnisse (scanner.rs:700-733); Engine-Tests rendern offline Puffer (engine.rs:460).
-- Frontend: keine Tests/kein Runner (package.json:6-13); Absicherung nur `npm run check` und `npm run build`.
+- 118 `#[test]`-Attribute in 17 Dateien (18 `#[cfg(test)]`-Blöcke, scanner.rs hat zwei) (z. B. m3u.rs:67-197, scanner.rs:755, db.rs:200).
+- m3u: 16 Tests zu BOM, CRLF, `#EXTINF`, Kommentaren, Windows-Pfaden (m3u.rs:80-197).
+- scanner: Playlist → Testpressung inkl. fehlender Einträge und Cover (scanner.rs:978-1029); 10 Tests gesamt (scanner.rs:755, 845).
+- audio/cue: 3 Tests zu Dekodierung, Variation zwischen Starts und Ende des Einlaufs (cue.rs:224-255); engine: 20 Tests inkl. Pre-Roll (engine.rs:463, 740-793).
+- DB nutzt In-Memory-SQLite (db.rs:37-43); Session-Tests schreiben WAV-Dateien (session.rs:449, 545).
+- Kein Frontend-Testskript; statischer Check ist `npm run check` (package.json:11).

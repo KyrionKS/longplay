@@ -45,12 +45,14 @@ npm run tauri dev
 ```
 
 Bedienung: Album anklicken (oder `1`–`9` für die Alben der aktuellen Seite) legt es auf,
-`START/STOP` bzw. `Leertaste` startet, die Tabs `A`/`B` wechseln die Seite, `33`/`45`
-ändern die Drehzahl (und damit Tonhöhe und Tempo).
+`START/STOP` bzw. `Leertaste` startet bzw. stoppt; `STOP` setzt die Seite auf Anfang zurück
+und führt den Arm in die Ablage. Pause und Weiter macht der Cue-Hebel am Arm (oder `L`):
+hoch hebt die Nadel, der Teller dreht weiter; runter setzt sie wieder auf. Die Tabs `A`/`B`
+wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
 Auf die Platte ziehen setzt die Nadel an der Stelle ab; beim Überfahren zeigt ein
 kleines Etikett den Track unter dem Zeiger. Beim Cueen in einen anderen Track bleibt
 die Nadel sichtbar auf der Platte, während der Track nachlädt; der vorgeladene nächste
-Track springt sofort. `Leertaste` startet und stoppt.
+Track springt sofort.
 
 **Hülle:** „Cover & Rückseite“ am Plattenspieler (oder `G`) öffnet das Cover groß;
 Klick auf die Hülle oder `Leertaste` dreht sie um und zeigt die generierte Rückseite

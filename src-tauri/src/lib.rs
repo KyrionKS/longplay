@@ -112,6 +112,12 @@ fn playback_toggle(state: tauri::State<'_, AppState>) -> PlaybackState {
 }
 
 #[tauri::command]
+fn playback_play(state: tauri::State<'_, AppState>) -> PlaybackState {
+    state.playback.play();
+    state.playback.state()
+}
+
+#[tauri::command]
 fn playback_pause(state: tauri::State<'_, AppState>) -> PlaybackState {
     state.playback.pause();
     state.playback.state()
@@ -186,6 +192,7 @@ pub fn run() {
             playback_load,
             playback_state,
             playback_toggle,
+            playback_play,
             playback_pause,
             playback_stop,
             playback_seek,
