@@ -184,7 +184,12 @@ impl CueVoice {
         if self.needle_active {
             // No fade-in on the drop: its impact is the point, and it starts at
             // sample 0 of a silent recording.
-            let sample = read_sample(&samples.needle, &mut self.needle_pos, self.needle_step);
+            let sample = read_sample(
+                &samples.needle,
+                &mut self.needle_pos,
+                self.needle_step,
+                false,
+            );
             let cutoff = 2.0 * std::f32::consts::PI * 1_500.0 / device_rate;
             self.needle_lp += cutoff * (sample - self.needle_lp);
             let presence = sample - self.needle_lp;
@@ -198,8 +203,12 @@ impl CueVoice {
             // 300 ms swell, so the static does not sit at full level from the
             // first frame; it also hides the random offset of the window.
             self.surface_ramp = (self.surface_ramp + 1.0 / (0.3 * device_rate)).min(1.0);
-            value += read_sample(&samples.surface, &mut self.surface_pos, self.surface_step)
-                * self.surface_gain
+            value += read_sample(
+                &samples.surface,
+                &mut self.surface_pos,
+                self.surface_step,
+                true,
+            ) * self.surface_gain
                 * self.surface_ramp;
         }
 
@@ -213,7 +222,7 @@ impl Default for CueVoice {
     }
 }
 
-fn read_sample(sample: &Sample, position: &mut f32, step: f32) -> f32 {
+fn read_sample(sample: &Sample, position: &mut f32, step: f32, wrap: bool) -> f32 {
     if sample.data.is_empty() {
         return 0.0;
     }
@@ -229,7 +238,9 @@ fn read_sample(sample: &Sample, position: &mut f32, step: f32) -> f32 {
         0.0
     };
     *position += step;
-    if *position >= length as f32 {
+    // The needle drop must run exactly once; wrapping it would loop the
+    // 0.44 s thump for as long as the lead-in lasts.
+    if wrap && *position >= length as f32 {
         *position -= length as f32;
     }
     sample.data[index] * (1.0 - fraction) + next * fraction
@@ -256,6 +267,17 @@ mod tests {
         assert!((2.0..=4.0).contains(&first));
         assert!((2.0..=4.0).contains(&second));
         assert!((first - second).abs() > 1e-6 || (first_pos - voice.surface_pos).abs() > 1.0);
+    }
+
+    #[test]
+    fn needle_drop_plays_once() {
+        let mut voice = CueVoice::new();
+        voice.start(48_000);
+        for _ in 0..48_000 {
+            voice.process(48_000);
+        }
+        assert!(!voice.needle_active, "the drop must not loop");
+        assert!(voice.surface_left > 0.0, "the lead-in static keeps running");
     }
 
     #[test]
