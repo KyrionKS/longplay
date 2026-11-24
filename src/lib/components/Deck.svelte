@@ -144,10 +144,10 @@
 
   const statePhi = $derived.by(() => {
     if (dragging) return manualPhi;
+    if (hold) return holdPhi;
     if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
     if (cuePhase) return cueTargetPhi;
-    if (hold) return holdPhi;
     if (stopped) return REST_PHI;
     if (atEnd) return REST_PHI;
     if (!armPlaced && !playing) return REST_PHI;
@@ -169,7 +169,7 @@
   );
 
   const armLift = $derived(
-    cuePhase === "swing" || dragging || (liftUp && !stopped) || homing ? -6 : 0,
+    cuePhase === "swing" || dragging || liftUp || homing ? -6 : 0,
   );
 
   let platterAngle = $state(0);
@@ -229,7 +229,7 @@
     if (cuePhase === "lower") armPlaced = true;
     // A stop must win over a pending cue badge, otherwise the arm stays on the
     // record and the readout keeps the cue time.
-    if (stopped) cueHold = null;
+    if (hold) cueHold = null;
   });
 
   $effect(() => {
@@ -766,7 +766,7 @@
       class="cue-lever-button"
       type="button"
       aria-pressed={liftUp}
-      aria-disabled={!active || busy}
+      aria-disabled={!side || !playback?.loaded || loading || busy}
       aria-label={liftUp ? "Tonarm absenken" : "Tonarm anheben"}
       title={liftUp ? "Tonarm absenken (weiter)" : "Tonarm anheben"}
       style:left={`${leverBaseX - armLengthPx * 0.03}px`}
@@ -783,7 +783,7 @@
       class:ready={!!album && !loading}
       class:playing={active}
       type="button"
-      disabled={!album || busy}
+      disabled={!album || busy || (liftUp && !active)}
       onclick={onToggle}
       title={busy
         ? "Tonarm bewegt sich"

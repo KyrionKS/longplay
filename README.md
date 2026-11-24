@@ -47,8 +47,9 @@ npm run tauri dev
 Bedienung: Album anklicken (oder `1`–`9` für die Alben der aktuellen Seite) legt es auf,
 `START/STOP` bzw. `Leertaste` startet bzw. stoppt; `STOP` setzt die Seite auf Anfang zurück
 und führt den Arm in die Ablage. Pause und Weiter macht der Cue-Hebel am Arm (oder `L`):
-hoch hebt die Nadel, der Teller dreht weiter; solange er oben ist, lässt sich der Arm ziehen.
-Absenken spielt den Nadel-Aufschlag und setzt an der neuen Stelle fort. Die Tabs `A`/`B`
+hoch hebt die Nadel, der Teller dreht weiter; solange er oben ist, lässt sich der Arm ziehen –
+auch aus der Ablage, um die Nadel von Hand aufzulegen. Absenken spielt den Nadel-Aufschlag und
+setzt an der neuen Stelle fort. Die Tabs `A`/`B`
 wechseln die Seite, `33`/`45` ändern die Drehzahl (und damit Tonhöhe und Tempo).
 Auf die Platte ziehen setzt die Nadel an der Stelle ab; beim Überfahren zeigt ein
 kleines Etikett den Track unter dem Zeiger. Beim Absetzen ist immer der Nadel-Aufschlag

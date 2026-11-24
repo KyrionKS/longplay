@@ -276,8 +276,9 @@ Scratchen ist nicht im Scope. Der Tonarm wird gezogen, um zu cueen:
 - **STOP**: Audio hält an, die Position springt auf 0, der Arm hebt ab und schwenkt zurück
   in die Ablage, der Teller läuft aus. Nächstes START beginnt die Seite von vorn.
 - **Pause** über den Cue-Hebel am Arm: Hebel hoch hebt den Arm (Audio pausiert, Position
-  bleibt, der Teller dreht weiter) und gibt ihn zum Ziehen frei. Absenken spielt immer den
-  Nadel-Aufschlag und setzt an der Armposition fort – auch ohne Positionswechsel.
+  bleibt, der Teller dreht weiter) und gibt ihn zum Ziehen frei – auch aus der Ablage, um die
+  Nadel von Hand aufzulegen. Absenken spielt immer den Nadel-Aufschlag und setzt an der
+  Armposition fort – auch ohne Positionswechsel.
 - Der START/STOP-Button zeigt STOP, solange die Seite läuft oder pausiert ist; weiter geht
   es ausschließlich über den Hebel. Tasten: Leertaste START/STOP, `L` Cue-Hebel.
 

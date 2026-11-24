@@ -218,6 +218,9 @@
 
   async function toggle() {
     if (!selected || armMoving) return;
+    // With the arm held up over the rest, START would fight the manual
+    // placement; the lever is the control in that moment.
+    if (liftUp && !paused) return;
     const state = playback.state;
     if (state?.playing || paused) {
       await stopSide();
@@ -290,10 +293,14 @@
       pendingCueTime = null;
       if (time !== null) {
         void cuePlayback(time);
-      } else {
+      } else if (paused) {
         void lowerPlayback();
       }
+      return;
     }
+    // Stopped side: lift the arm from the rest so it can be placed by hand.
+    liftUp = true;
+    pendingCueTime = null;
   }
 
   function changeRpm(rpm: number) {
