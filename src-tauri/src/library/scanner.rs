@@ -73,10 +73,15 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
     let mut issues = Vec::new();
     let mut albums: Vec<Album> = Vec::new();
 
+    // A folder can be added twice, or once directly and once through its
+    // parent. Walk every physical folder only once, otherwise the same album is
+    // built two times and the id collides on insert.
+    let roots = unique_roots(roots);
+
     let mut audio_files = Vec::new();
     let mut cue_files = Vec::new();
     let mut playlist_files = Vec::new();
-    collect_files(roots, &mut audio_files, &mut cue_files, &mut playlist_files);
+    collect_files(&roots, &mut audio_files, &mut cue_files, &mut playlist_files);
 
     let mut consumed: HashSet<PathBuf> = HashSet::new();
 
@@ -120,6 +125,10 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
     }
 
     albums.sort_by_key(|album| std::cmp::Reverse(album.added_at));
+    // Two roots that point at the same folder through different paths would
+    // still yield the same album twice. Keep the first (most recent) one.
+    let mut seen = HashSet::new();
+    albums.retain(|album| seen.insert(album.id.clone()));
 
     let tracks: usize = albums.iter().map(|album| album.track_count as usize).sum();
     db.replace_albums(&albums)?;
@@ -130,6 +139,23 @@ pub fn scan(roots: &[PathBuf], db: &mut Db, covers: &Path) -> Result<ScanSummary
         issues,
         elapsed_ms: started.elapsed().as_millis() as u64,
     })
+}
+
+/// Resolves the scan roots and drops duplicates as well as folders that are
+/// already covered by another root, so every file is walked exactly once.
+fn unique_roots(roots: &[PathBuf]) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = Vec::new();
+    for root in roots {
+        let Ok(path) = root.canonicalize() else {
+            continue;
+        };
+        if out.iter().any(|existing| path.starts_with(existing)) {
+            continue;
+        }
+        out.retain(|existing| !existing.starts_with(&path));
+        out.push(path);
+    }
+    out
 }
 
 fn collect_files(
@@ -1024,6 +1050,42 @@ mod scan_tests {
         assert!((tracks[0].duration - 5.0).abs() < 0.2);
         assert!((tracks[1].duration - 7.0).abs() < 0.2);
         assert!(album.cover.is_some(), "playlist uses the folder cover");
+
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn unique_roots_keeps_each_folder_once() {
+        let root = temp_root("roots");
+        let album = root.join("Ascendancy");
+        fs::create_dir_all(&album).unwrap();
+
+        let roots = unique_roots(&[root.clone(), album.clone(), root.clone()]);
+
+        assert_eq!(roots, vec![root.canonicalize().unwrap()]);
+        fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn nested_roots_do_not_duplicate_the_album() {
+        let root = temp_root("nested");
+        let album = root.join("Ascendancy");
+        fs::create_dir_all(&album).unwrap();
+        write_wav(&album.join("one.wav"), 5.0);
+        fs::write(
+            album.join("Ascendancy.cue"),
+            "PERFORMER \"Trivium\"\nTITLE \"Ascendancy\"\nFILE \"one.wav\" WAVE\n  \
+             TRACK 01 AUDIO\n    TITLE \"One\"\n    INDEX 01 00:00:00\n",
+        )
+        .unwrap();
+
+        let covers = root.join("covers");
+        let mut db = Db::in_memory().unwrap();
+        let summary = scan(&[root.clone(), album], &mut db, &covers).unwrap();
+
+        assert_eq!(summary.albums, 1);
+        assert_eq!(summary.tracks, 1);
+        assert_eq!(db.load_albums().unwrap().len(), 1);
 
         fs::remove_dir_all(&root).ok();
     }
