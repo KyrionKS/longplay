@@ -46,6 +46,14 @@ export async function pausePlayback(): Promise<void> {
   playback.state = await invoke<PlaybackState>("playback_pause");
 }
 
+export async function lowerPlayback(): Promise<void> {
+  try {
+    playback.state = await invoke<PlaybackState>("playback_lower");
+  } catch (error) {
+    playback.error = String(error);
+  }
+}
+
 export async function playPlayback(): Promise<void> {
   try {
     playback.state = await invoke<PlaybackState>("playback_play");

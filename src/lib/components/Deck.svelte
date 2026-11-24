@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import type { Album, GrooveBand, PlaybackState, Side } from "$lib/types";
-  import { cuePlayback, formatClock, pausePlayback } from "$lib/playback.svelte";
+  import { formatClock, pausePlayback } from "$lib/playback.svelte";
   import { cuePointForRadius, thetaForRadius } from "$lib/groove";
   import Vinyl from "./Vinyl.svelte";
 
@@ -18,7 +18,7 @@
     onSide: (index: number) => void;
     onToggle: () => void;
     onLift: () => void;
-    onCue: () => void;
+    onCueMove: (time: number) => void;
     onRpm: (rpm: number) => void;
     onCover: () => void;
   }
@@ -36,7 +36,7 @@
     onSide,
     onToggle,
     onLift,
-    onCue,
+    onCueMove,
     onRpm,
     onCover,
   }: Props = $props();
@@ -203,6 +203,8 @@
 
   $effect(() => {
     if (!cueHold) return;
+    // The arm stays where it was placed until the lever is lowered.
+    if (liftUp) return;
     // Read the derived boolean, not `playback.loading`: the poll replaces the
     // playback object every 250 ms, which would restart this timer forever and
     // leave the arm stuck at the cue position.
@@ -335,7 +337,8 @@
   }
 
   function onPointerDown(event: PointerEvent) {
-    if (busy || !album || !side || !playback?.loaded || loading) return;
+    // Like a real deck: the arm only moves while the cue lever holds it up.
+    if (busy || !liftUp || !album || !side || !playback?.loaded || loading) return;
     dragging = true;
     armPlaced = true;
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
@@ -355,23 +358,17 @@
     if (!dragging) return;
     dragging = false;
     hoverTrackIndex = null;
-    // If the transport was stopped while the arm was held, the release must
-    // not revive the cue.
     if (busy) return;
-    const sameTrack =
-      cueTrackIndex !== null && cueTrackIndex === playback?.trackIndex;
-    if (!sameTrack) {
-      cueHold = {
-        phi: manualPhi,
-        time: cueTime,
-        x: cueX,
-        y: cueY,
-        trackIndex: cueTrackIndex,
-      };
-    }
-    // Dropping the needle always lowers the cue lever.
-    onCue();
-    void cuePlayback(cueTime);
+    // The arm stays lifted where it was placed; lowering the lever starts the
+    // playback there and plays the needle drop.
+    cueHold = {
+      phi: manualPhi,
+      time: cueTime,
+      x: cueX,
+      y: cueY,
+      trackIndex: cueTrackIndex,
+    };
+    onCueMove(cueTime);
   }
 
   function onPointerLeave() {
@@ -391,7 +388,7 @@
         class="platter"
         class:dragging
         role="group"
-        aria-label="Plattenteller — ziehen, um die Nadel zu setzen"
+        aria-label="Plattenteller — Tonarm anheben, dann ziehen"
         bind:this={platterEl}
         onpointerdown={onPointerDown}
         onpointermove={onPointerMove}
@@ -454,7 +451,7 @@
               {#if cueHold.trackIndex !== null && side?.tracks[cueHold.trackIndex]}
                 · {side.tracks[cueHold.trackIndex].number}. {side.tracks[cueHold.trackIndex].title}
               {/if}
-              · lädt …
+              · {liftUp ? "angehoben" : "lädt …"}
             {:else if loading}
               Platte wird aufgelegt …
             {:else}
@@ -484,7 +481,7 @@
       >
         <span class="cue-time">{formatClock(dragging ? cueTime : (cueHold?.time ?? 0))}</span>
         {#if badgeTrack}<strong>{badgeTrack.number}. {badgeTrack.title}</strong>{/if}
-        {#if !dragging}<span class="cue-loading">lädt …</span>{/if}
+        {#if !dragging}<span class="cue-loading">{liftUp ? "angehoben" : "lädt …"}</span>{/if}
       </div>
     {:else if hoverTrack && !dragging}
       <div class="hover-badge" style:left={`${hoverX}px`} style:top={`${hoverY}px`}>
@@ -770,8 +767,8 @@
       type="button"
       aria-pressed={liftUp}
       aria-disabled={!active || busy}
-      aria-label={liftUp ? "Tonarm senken" : "Tonarm anheben"}
-      title={liftUp ? "Tonarm senken (Weiter)" : "Tonarm anheben (Pause)"}
+      aria-label={liftUp ? "Tonarm absenken" : "Tonarm anheben"}
+      title={liftUp ? "Tonarm absenken (weiter)" : "Tonarm anheben"}
       style:left={`${leverBaseX - armLengthPx * 0.03}px`}
       style:top={`${leverBaseY - armLengthPx * 0.035}px`}
       style:width={`${armLengthPx * 0.16}px`}

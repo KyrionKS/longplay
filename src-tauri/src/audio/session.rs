@@ -230,6 +230,13 @@ impl Session {
         self.engine.pause();
     }
 
+    /// Lowers the needle again and continues from the current position: the
+    /// drop plays first, then the music.
+    pub fn lower(&self) {
+        self.engine.request_cue_drop();
+        self.engine.play();
+    }
+
     pub fn toggle(self: &Arc<Self>) {
         if self.loading.load(Ordering::Relaxed) || !self.engine.has_track() {
             return;

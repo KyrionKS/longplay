@@ -7,7 +7,9 @@
   import Gatefold from "$lib/components/Gatefold.svelte";
   import { chooseMusicFolder, library, loadLibrary, rescan } from "$lib/library.svelte";
   import {
+    cuePlayback,
     loadSide,
+    lowerPlayback,
     pausePlayback,
     playback,
     playPlayback,
@@ -28,6 +30,7 @@
   let liftUp = $state(false);
   let armMoving = $state(false);
   let armHold = $state(false);
+  let pendingCueTime = $state<number | null>(null);
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -193,6 +196,7 @@
     startPending = false;
     armMoving = false;
     armHold = false;
+    pendingCueTime = null;
   }
 
   const ready = $derived(!!loadedState && !loadedState.loading);
@@ -275,12 +279,20 @@
     if (!state?.loaded || state.loading) return;
     if (state.playing) {
       liftUp = true;
+      pendingCueTime = null;
       void pausePlayback();
       return;
     }
-    if (paused) {
+    if (liftUp) {
+      // Lowering the needle: drop first, then continue at the arm position.
+      const time = pendingCueTime;
       liftUp = false;
-      void playPlayback();
+      pendingCueTime = null;
+      if (time !== null) {
+        void cuePlayback(time);
+      } else {
+        void lowerPlayback();
+      }
     }
   }
 
@@ -324,7 +336,7 @@
       onSide={changeSide}
       onToggle={toggle}
       onLift={toggleLift}
-      onCue={() => (liftUp = false)}
+      onCueMove={(time) => (pendingCueTime = time)}
       onRpm={changeRpm}
       onCover={() => {
         gatefoldOpen = true;

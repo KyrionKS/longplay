@@ -261,7 +261,8 @@ Fortschritt linear in der Zeit, Track-Bänder aus den Dauern.
 Scratchen ist nicht im Scope. Der Tonarm wird gezogen, um zu cueen:
 
 - Arm anheben, über die Platte bewegen, auf einer Rille absetzen; Audio bleibt bis zum
-  Aufsetzen stumm.
+  Aufsetzen stumm. Der Arm lässt sich nur mit angehobenem Cue-Hebel bewegen; beim Absenken
+  ist immer der Aufschlag zu hören, auch wenn die Position unverändert bleibt.
 - Während des Ziehens folgt der Arm dem Zeiger, die Nadel bleibt angehoben
   (Cantilever-Physik).
 - Aufsetzen: kurzer Nadel-Fall-Thump, dann Wiedergabe ab der Position.
@@ -274,8 +275,9 @@ Scratchen ist nicht im Scope. Der Tonarm wird gezogen, um zu cueen:
   die Wiedergabe beginnt.
 - **STOP**: Audio hält an, die Position springt auf 0, der Arm hebt ab und schwenkt zurück
   in die Ablage, der Teller läuft aus. Nächstes START beginnt die Seite von vorn.
-- **Pause** über den Cue-Hebel am Arm: Hebel hoch hebt den Arm um wenige Pixel (Audio
-  pausiert, Position bleibt, der Teller dreht weiter), Hebel runter senkt ihn und setzt fort.
+- **Pause** über den Cue-Hebel am Arm: Hebel hoch hebt den Arm (Audio pausiert, Position
+  bleibt, der Teller dreht weiter) und gibt ihn zum Ziehen frei. Absenken spielt immer den
+  Nadel-Aufschlag und setzt an der Armposition fort – auch ohne Positionswechsel.
 - Der START/STOP-Button zeigt STOP, solange die Seite läuft oder pausiert ist; weiter geht
   es ausschließlich über den Hebel. Tasten: Leertaste START/STOP, `L` Cue-Hebel.
 
