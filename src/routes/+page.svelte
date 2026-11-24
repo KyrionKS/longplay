@@ -308,6 +308,7 @@
       onSide={changeSide}
       onToggle={toggle}
       onLift={toggleLift}
+      onCue={() => (liftUp = false)}
       onRpm={changeRpm}
       onCover={() => {
         gatefoldOpen = true;

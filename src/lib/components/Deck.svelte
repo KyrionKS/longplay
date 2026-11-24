@@ -17,6 +17,7 @@
     onSide: (index: number) => void;
     onToggle: () => void;
     onLift: () => void;
+    onCue: () => void;
     onRpm: (rpm: number) => void;
     onCover: () => void;
   }
@@ -33,6 +34,7 @@
     onSide,
     onToggle,
     onLift,
+    onCue,
     onRpm,
     onCover,
   }: Props = $props();
@@ -159,7 +161,7 @@
   );
 
   const armLift = $derived(
-    cuePhase === "swing" || (liftUp && !stopped) || homing ? -6 : 0,
+    cuePhase === "swing" || dragging || (liftUp && !stopped) || homing ? -6 : 0,
   );
 
   let platterAngle = $state(0);
@@ -193,7 +195,10 @@
 
   $effect(() => {
     if (!cueHold) return;
-    if (playback?.loading) return;
+    // Read the derived boolean, not `playback.loading`: the poll replaces the
+    // playback object every 250 ms, which would restart this timer forever and
+    // leave the arm stuck at the cue position.
+    if (loading) return;
     const timer = setTimeout(() => {
       cueHold = null;
     }, 900);
@@ -212,6 +217,9 @@
     if (atEnd) armPlaced = false;
     if (stopped) armPlaced = false;
     if (cuePhase === "lower") armPlaced = true;
+    // A stop must win over a pending cue badge, otherwise the arm stays on the
+    // record and the readout keeps the cue time.
+    if (stopped) cueHold = null;
   });
 
   $effect(() => {
@@ -319,7 +327,7 @@
   }
 
   function onPointerDown(event: PointerEvent) {
-    if (!album || !side || !playback?.loaded || loading) return;
+    if (busy || !album || !side || !playback?.loaded || loading) return;
     dragging = true;
     armPlaced = true;
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
@@ -337,6 +345,11 @@
 
   function onPointerUp() {
     if (!dragging) return;
+    dragging = false;
+    hoverTrackIndex = null;
+    // If the transport was stopped while the arm was held, the release must
+    // not revive the cue.
+    if (busy) return;
     const sameTrack =
       cueTrackIndex !== null && cueTrackIndex === playback?.trackIndex;
     if (!sameTrack) {
@@ -348,8 +361,8 @@
         trackIndex: cueTrackIndex,
       };
     }
-    dragging = false;
-    hoverTrackIndex = null;
+    // Dropping the needle always lowers the cue lever.
+    onCue();
     void cuePlayback(cueTime);
   }
 
