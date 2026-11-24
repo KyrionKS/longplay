@@ -506,6 +506,7 @@ mod tests {
         };
 
         let session = Arc::new(Session::new());
+        session.engine.set_runout_seconds(0.3);
         session.start_output();
         session.load("album", 0, &side, DiscFormat::Lp12, true);
         wait_until(|| session.state().loaded);
@@ -607,6 +608,7 @@ mod tests {
         };
 
         let session = Arc::new(Session::new());
+        session.engine.set_runout_seconds(0.3);
         session.start_output();
         session.load("album", 0, &side, DiscFormat::Lp12, true);
 

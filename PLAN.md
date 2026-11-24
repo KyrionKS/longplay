@@ -265,7 +265,8 @@ Scratchen ist nicht im Scope. Der Tonarm wird gezogen, um zu cueen:
 - Während des Ziehens folgt der Arm dem Zeiger, die Nadel bleibt angehoben
   (Cantilever-Physik).
 - Aufsetzen: kurzer Nadel-Fall-Thump, dann Wiedergabe ab der Position.
-- Seitenende: Auslaufrille mit Locked-Groove-Thump, Auto-Return in die Ablage.
+- Seitenende: 5 s Auslaufrille mit Oberflächengeräusch, dann Auto-Return in die Ablage;
+  kein automatischer Seitenwechsel.
 
 ### Start, Stop, Pause
 
@@ -409,7 +410,7 @@ auf die ersten beiden Ausgänge, weitere Kanäle bleiben still. Mono wird herunt
 - [x] Auto-Return am Seitenende
 - [x] 33/45 (Tonhöhe und Tempo)
 - [x] Seiten-Flip-Animation und 7″-Darstellung
-- [ ] Locked-Groove-Thump am Seitenende
+- [x] Auslaufrille: 5 s Oberflächengeräusch am Seitenende, danach Arm-Rückweg (kein Auto-Seitenwechsel)
 - [ ] Ästhetik-Pass: Abrieb, Matrix-Ritzung, Staub, Licht, Gatefold
 - [x] Tonarmhöhe/Drehpunkt, größere Platte, Teller und Platte drehen gemeinsam
 

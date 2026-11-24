@@ -222,6 +222,69 @@ impl Default for CueVoice {
     }
 }
 
+/// The runout groove: the same surface bed while the stylus rides the locked
+/// groove at the end of a side, before the arm returns.
+pub struct RunoutVoice {
+    pos: f32,
+    step: f32,
+    gain: f32,
+    ramp: f32,
+    rng: u32,
+}
+
+impl RunoutVoice {
+    pub fn new() -> Self {
+        let seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.subsec_nanos() ^ duration.as_secs() as u32)
+            .unwrap_or(0x2b7e_1516);
+        Self {
+            pos: 0.0,
+            step: 1.0,
+            gain: 1.0,
+            ramp: 0.0,
+            rng: seed | 1,
+        }
+    }
+
+    fn random(&mut self) -> f32 {
+        let mut x = self.rng;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        self.rng = x;
+        (x >> 8) as f32 / 16_777_216.0
+    }
+
+    pub fn start(&mut self, device_rate: u32) {
+        let samples = samples();
+        let device_rate = device_rate.max(1) as f32;
+        let length = samples.surface.data.len() as f32;
+        self.pos = if length > 0.0 {
+            self.random() * (length * 0.6)
+        } else {
+            0.0
+        };
+        self.step = samples.surface.rate as f32 / device_rate * (0.98 + 0.04 * self.random());
+        self.gain = 0.9 + 0.2 * self.random();
+        self.ramp = 0.0;
+    }
+
+    pub fn process(&mut self, device_rate: u32) -> (f32, f32) {
+        let samples = samples();
+        let sample = read_sample(&samples.surface, &mut self.pos, self.step, false);
+        self.ramp = (self.ramp + 1.0 / (0.05 * device_rate.max(1) as f32)).min(1.0);
+        let value = sample * self.gain * self.ramp;
+        (value, value * 0.97)
+    }
+}
+
+impl Default for RunoutVoice {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn read_sample(sample: &Sample, position: &mut f32, step: f32, wrap: bool) -> f32 {
     if sample.data.is_empty() {
         return 0.0;

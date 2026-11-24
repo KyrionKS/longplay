@@ -11,12 +11,14 @@ use std::sync::{Arc, Mutex};
 
 use arc_swap::ArcSwapOption;
 
-use super::cue::CueVoice;
+use super::cue::{CueVoice, RunoutVoice};
 use super::decode::TrackAudio;
 use super::noise::VinylNoise;
 use super::resample::read_interleaved;
 
 const FADE_SECONDS: f64 = 0.02;
+/// Default time the stylus rides the runout groove before the arm returns.
+const RUNOUT_SECONDS: f32 = 5.0;
 
 pub struct DspState {
     noise: VinylNoise,
@@ -25,6 +27,9 @@ pub struct DspState {
     time: f64,
     was_playing: bool,
     pre_roll: u64,
+    runout: u64,
+    runout_started: bool,
+    runout_voice: RunoutVoice,
 }
 
 impl Default for DspState {
@@ -42,6 +47,9 @@ impl DspState {
             time: 0.0,
             was_playing: false,
             pre_roll: 0,
+            runout: 0,
+            runout_started: false,
+            runout_voice: RunoutVoice::new(),
         }
     }
 }
@@ -55,6 +63,7 @@ pub struct Engine {
     volume: AtomicU32,
     character: AtomicU32,
     needle_pre_roll: AtomicBool,
+    runout_seconds: AtomicU32,
     track_index: AtomicU64,
     side_start: AtomicU64,
     retired: Mutex<Vec<Arc<TrackAudio>>>,
@@ -85,6 +94,7 @@ impl Engine {
             volume: AtomicU32::new(0.9f32.to_bits()),
             character: AtomicU32::new(0.3f32.to_bits()),
             needle_pre_roll: AtomicBool::new(false),
+            runout_seconds: AtomicU32::new(RUNOUT_SECONDS.to_bits()),
             track_index: AtomicU64::new(0),
             side_start: AtomicU64::new(0.0f64.to_bits()),
             retired: Mutex::new(Vec::with_capacity(4)),
@@ -224,6 +234,11 @@ impl Engine {
         self.needle_pre_roll.store(enabled, Ordering::Relaxed);
     }
 
+    /// How long the stylus rides the runout groove at the end of a side.
+    pub fn set_runout_seconds(&self, seconds: f64) {
+        store_f32(&self.runout_seconds, seconds.max(0.0) as f32);
+    }
+
     pub fn character(&self) -> f32 {
         load_f32(&self.character)
     }
@@ -316,6 +331,8 @@ impl Engine {
 
         if !self.playing.load(Ordering::Relaxed) {
             dsp.was_playing = false;
+            dsp.runout = 0;
+            dsp.runout_started = false;
             return;
         }
 
@@ -361,10 +378,25 @@ impl Engine {
         let mut finished = false;
 
         for frame in out.as_chunks_mut::<2>().0 {
+            if dsp.runout > 0 {
+                // The side is over, but the stylus rides the locked groove for
+                // a few more seconds before the arm returns.
+                let (left, right) = dsp.runout_voice.process(device_rate);
+                let fade = (dsp.runout as f32 / (0.4 * device_rate as f32)).min(1.0);
+                frame[0] = soft_clip(left * volume * fade);
+                frame[1] = soft_clip(right * volume * fade);
+                dsp.runout -= 1;
+                if dsp.runout == 0 {
+                    finished = true;
+                }
+                continue;
+            }
+
             // Switch to the prefetched track at the boundary.
+            let mut side_ended = false;
             loop {
                 let Some(track) = current.as_ref() else {
-                    finished = true;
+                    side_ended = true;
                     break;
                 };
                 let frames = track.samples.len() / 2;
@@ -372,13 +404,22 @@ impl Engine {
                     break;
                 }
                 if !self.advance() {
-                    finished = true;
+                    side_ended = true;
                     break;
                 }
                 current = self.current.load_full();
                 position = 0.0;
             }
-            if finished {
+            if side_ended {
+                if !dsp.runout_started {
+                    dsp.runout_started = true;
+                    dsp.runout =
+                        (f64::from(load_f32(&self.runout_seconds)) * f64::from(device_rate))
+                            as u64;
+                    dsp.runout_voice.start(device_rate);
+                    continue;
+                }
+                finished = true;
                 break;
             }
 
@@ -512,7 +553,7 @@ mod tests {
     }
 
     #[test]
-    fn renders_audio_and_stops_at_the_end() {
+    fn renders_audio_and_rides_the_runout_before_stopping() {
         let engine = Engine::new();
         engine.load_track(track(0.5, 440.0, 0.5), 0.0);
         engine.play();
@@ -520,7 +561,18 @@ mod tests {
         let out = render(&engine, &mut dsp, 24_000);
         let peak = out.iter().fold(0.0f32, |acc, value| acc.max(value.abs()));
         assert!(peak > 0.2, "peak {peak}");
-        assert!(!engine.is_playing(), "must stop at the end");
+        assert!(engine.is_playing(), "the runout keeps the motor on");
+
+        // The runout groove must carry sound, not silence.
+        let runout = render(&engine, &mut dsp, 4_800);
+        assert!(
+            runout.iter().any(|value| value.abs() > 0.0),
+            "the runout should be audible"
+        );
+
+        // After about five seconds the side stops and the arm can return.
+        render(&engine, &mut dsp, 6 * 48_000);
+        assert!(!engine.is_playing(), "must stop after the runout");
         assert!((engine.position_seconds() - 0.5).abs() < 1e-3);
         let tail = render(&engine, &mut dsp, 480);
         assert!(tail.iter().all(|value| *value == 0.0));
@@ -716,6 +768,7 @@ mod tests {
         engine.play();
         let mut dsp = DspState::new();
         render(&engine, &mut dsp, 12_000);
+        render(&engine, &mut dsp, 6 * 48_000);
         assert!(!engine.is_playing());
         assert!(engine.position_frames() > 0);
 

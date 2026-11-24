@@ -63,7 +63,8 @@ auf den Teller; der Tonarm bleibt in der Ablage. Beim ersten `START` schwenkt er
 Ruhe zur äußeren Rille (~2,4 s), senkt sich ab (~0,5 s); danach läuft die Einlaufrille
 2–4 Sekunden mit einem echten Nadel-Aufschlag und einer leisen Oberflächenstatik, erst dann
 beginnt der erste Track. Beide Samples variieren bei jedem Start leicht in Pegel,
-Geschwindigkeit und Startposition.
+Geschwindigkeit und Startposition. Am Seitenende läuft die Nadel noch etwa 5 Sekunden in
+der Auslaufrille, danach fährt der Arm in die Ablage; die Seite wechselt nicht automatisch.
 
 **Playlists:** `.m3u`/`.m3u8`-Dateien im Mediathek-Ordner werden als
 White-Label-Testpressung gepresst: handbeschriftetes Label, „Promo · Not for Sale“
