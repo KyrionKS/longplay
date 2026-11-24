@@ -214,7 +214,6 @@
 
   $effect(() => {
     const target = statePhi;
-    const speed = dragging ? 30 : cuePhase ? 3.4 : 8;
     let frame = 0;
     let last = performance.now();
 
@@ -222,6 +221,9 @@
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       untrack(() => {
+        // Cueing and the return home are deliberately slower than normal
+        // groove tracking; a real arm does not snap around.
+        const speed = dragging ? 30 : cuePhase ? 2 : homing ? 3.5 : 8;
         if (Math.abs(target - armPhi) > 0.0004) {
           armPhi += (target - armPhi) * (1 - Math.exp(-speed * dt));
         }
@@ -1038,7 +1040,7 @@
   }
 
   .arm-front {
-    transition: transform 220ms ease;
+    transition: transform 380ms ease;
   }
 
   .arm-layer {

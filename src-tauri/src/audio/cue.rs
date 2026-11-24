@@ -94,13 +94,15 @@ pub struct CueVoice {
     needle_pos: f32,
     needle_step: f32,
     needle_gain: f32,
+    needle_presence: f32,
+    needle_lp: f32,
     needle_active: bool,
     surface_pos: f32,
     surface_step: f32,
     surface_gain: f32,
     surface_left: f32,
     rng: u32,
-    ramp: f32,
+    surface_ramp: f32,
 }
 
 impl CueVoice {
@@ -113,13 +115,15 @@ impl CueVoice {
             needle_pos: 0.0,
             needle_step: 1.0,
             needle_gain: 1.0,
+            needle_presence: 0.0,
+            needle_lp: 0.0,
             needle_active: false,
             surface_pos: 0.0,
             surface_step: 1.0,
             surface_gain: 1.0,
             surface_left: 0.0,
             rng: seed | 1,
-            ramp: 0.0,
+            surface_ramp: 0.0,
         }
     }
 
@@ -143,7 +147,12 @@ impl CueVoice {
 
         self.needle_pos = 0.0;
         self.needle_step = samples.needle.rate as f32 / device_rate * self.between(0.96, 1.04);
-        self.needle_gain = self.between(0.78, 1.08);
+        // The drop is almost pure low end (99 % below 200 Hz), so small
+        // speakers barely reproduce it. A little high-passed copy of the same
+        // recording adds the impact click without changing the source.
+        self.needle_gain = self.between(1.0, 1.12);
+        self.needle_presence = self.between(1.2, 1.4);
+        self.needle_lp = 0.0;
         self.needle_active = !samples.needle.data.is_empty();
 
         let length = samples.surface.data.len() as f32;
@@ -153,9 +162,12 @@ impl CueVoice {
             0.0
         };
         self.surface_step = samples.surface.rate as f32 / device_rate * self.between(0.98, 1.02);
-        self.surface_gain = self.between(0.78, 1.06);
+        // The bundled surface recording is dense and bright; at the old gain it
+        // drowned both the drop and the music. Keep it as a faint bed with
+        // occasional ticks, well below the music.
+        self.surface_gain = self.between(0.22, 0.34);
         self.surface_left = 2.0 + 2.0 * self.random();
-        self.ramp = 0.0;
+        self.surface_ramp = 0.0;
 
         self.surface_left
     }
@@ -170,22 +182,28 @@ impl CueVoice {
 
         let mut value = 0.0f32;
         if self.needle_active {
-            value += read_sample(&samples.needle, &mut self.needle_pos, self.needle_step)
-                * self.needle_gain;
+            // No fade-in on the drop: its impact is the point, and it starts at
+            // sample 0 of a silent recording.
+            let sample = read_sample(&samples.needle, &mut self.needle_pos, self.needle_step);
+            let cutoff = 2.0 * std::f32::consts::PI * 1_500.0 / device_rate;
+            self.needle_lp += cutoff * (sample - self.needle_lp);
+            let presence = sample - self.needle_lp;
+            value += self.needle_gain * (sample + self.needle_presence * presence);
             if self.needle_pos >= samples.needle.data.len() as f32 {
                 self.needle_active = false;
             }
         }
 
         if self.surface_left > 0.0 {
+            // 300 ms swell, so the static does not sit at full level from the
+            // first frame; it also hides the random offset of the window.
+            self.surface_ramp = (self.surface_ramp + 1.0 / (0.3 * device_rate)).min(1.0);
             value += read_sample(&samples.surface, &mut self.surface_pos, self.surface_step)
-                * self.surface_gain;
+                * self.surface_gain
+                * self.surface_ramp;
         }
 
-        // 20 ms fade-in so a random static offset cannot click.
-        self.ramp = (self.ramp + 1.0 / (0.02 * device_rate)).min(1.0);
-        let left = value * self.ramp;
-        (left, left * 0.97)
+        (value, value * 0.97)
     }
 }
 

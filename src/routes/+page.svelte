@@ -231,10 +231,10 @@
     const atStart = state.position <= 0.05;
     if (atStart || atEnd) {
       cuePhase = "swing";
-      await new Promise((resolve) => setTimeout(resolve, 1400));
+      await new Promise((resolve) => setTimeout(resolve, 2400));
       if (token !== cueToken) return;
       cuePhase = "lower";
-      await new Promise((resolve) => setTimeout(resolve, 450));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       if (token !== cueToken) return;
     }
     await togglePlayback();

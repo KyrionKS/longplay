@@ -60,8 +60,8 @@ mit Tracklist, Seiten- und Gesamtlaufzeit, Katalog und Barcode. `Esc` schließt.
 
 **Auflegen:** Ein Klick auf eine Hülle legt die Platte mit dem kurzen Auflege-Übergang
 auf den Teller; der Tonarm bleibt in der Ablage. Beim ersten `START` schwenkt er in
-Ruhe zur äußeren Rille (~1,4 s), senkt sich ab (~0,5 s); danach läuft die Einlaufrille
-2–4 Sekunden mit einem echten Nadel-Aufschlag und echter Oberflächenstatik, erst dann
+Ruhe zur äußeren Rille (~2,4 s), senkt sich ab (~0,5 s); danach läuft die Einlaufrille
+2–4 Sekunden mit einem echten Nadel-Aufschlag und einer leisen Oberflächenstatik, erst dann
 beginnt der erste Track. Beide Samples variieren bei jedem Start leicht in Pegel,
 Geschwindigkeit und Startposition.
 
