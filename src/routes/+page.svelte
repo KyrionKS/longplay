@@ -26,6 +26,7 @@
   let cueToken = 0;
   let startPending = $state(false);
   let liftUp = $state(false);
+  let armMoving = $state(false);
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -180,6 +181,7 @@
     cueToken += 1;
     cuePhase = null;
     startPending = false;
+    armMoving = false;
   }
 
   const ready = $derived(!!loadedState && !loadedState.loading);
@@ -200,7 +202,7 @@
   });
 
   async function toggle() {
-    if (!selected || cuePhase) return;
+    if (!selected || armMoving) return;
     const state = playback.state;
     if (state?.playing || paused) {
       await stopSide();
@@ -218,11 +220,18 @@
   async function stopSide() {
     cancelCue();
     liftUp = false;
+    armMoving = true;
     await stopPlayback();
+    // The arm swings home at the slower easing; keep the transport locked
+    // until it has settled.
+    const token = cueToken;
+    setTimeout(() => {
+      if (token === cueToken) armMoving = false;
+    }, 1500);
   }
 
   async function beginStart() {
-    if (!selected || cuePhase) return;
+    if (!selected || armMoving) return;
     const state = playback.state;
     if (!state?.loaded || state.loading) return;
     liftUp = false;
@@ -230,6 +239,7 @@
     const atEnd = state.duration > 0 && state.position >= state.duration - 0.08;
     const atStart = state.position <= 0.05;
     if (atStart || atEnd) {
+      armMoving = true;
       cuePhase = "swing";
       await new Promise((resolve) => setTimeout(resolve, 2400));
       if (token !== cueToken) return;
@@ -238,11 +248,14 @@
       if (token !== cueToken) return;
     }
     await togglePlayback();
-    if (token === cueToken) cuePhase = null;
+    if (token === cueToken) {
+      cuePhase = null;
+      armMoving = false;
+    }
   }
 
   function toggleLift() {
-    if (!selected || cuePhase) return;
+    if (!selected || armMoving) return;
     const state = playback.state;
     if (!state?.loaded || state.loading) return;
     if (state.playing) {
@@ -291,6 +304,7 @@
       grooves={loadedState?.grooves ?? []}
       cuePhase={cuePhase}
       liftUp={liftUp}
+      busy={armMoving}
       onSide={changeSide}
       onToggle={toggle}
       onLift={toggleLift}

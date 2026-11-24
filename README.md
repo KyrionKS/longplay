@@ -129,7 +129,7 @@ Der vollständige Plan steht in [PLAN.md](PLAN.md).
 - Gebürstetes Metall: prozedural erzeugt (Longplay).
 - Schrift „Caveat“: SIL Open Font License 1.1, siehe `static/fonts/OFL.txt`.
 - Nadel-Aufschlag: HenKonen, Freesound #682161, CC0.
-- Oberflächenstatik: nervousneal, Freesound #586430, CC0.
+- Oberflächenstatik: deleted_user_2906614, Freesound #266786, CC0.
 - Details und Änderungen: `src-tauri/assets/audio/CREDITS.md`.
 
 ## Lizenz

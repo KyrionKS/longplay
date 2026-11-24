@@ -12,11 +12,12 @@ Beide Dateien sind Ausschnitte aus Freesound-Aufnahmen. Sie wurden auf Mono,
 
 ## `vinyl_static.wav`
 
-- Original: „Vinyl Surface Noise 3 blank groove 22 minutes.wav“ von **nervousneal**
-- Quelle: https://freesound.org/people/nervousneal/sounds/586430/
+- Original: „Vinyl snap, crackle and pop redux“ von **deleted_user_2906614**
+- Quelle: https://freesound.org/people/deleted_user_2906614/sounds/266786/
 - Lizenz: **CC0 1.0** (Public Domain)
-- Änderung: Ausschnitt 1140–1200 s, auf RMS −45 dBFS normalisiert, Mono/48 kHz.
-  Das Original ist eine unveränderte Leerrille einer Testpressung von 1961.
+- Änderung: Ausschnitt 1–61 s, auf RMS −45 dBFS normalisiert, Mono/48 kHz.
+  Das Original ist eine Montage echter Oberflächengeräusche von Schallplatten;
+  ohne Umlaufmuster, daher kein hörbarer 1,8-s-Loop wie bei einer Leerrille.
 
 Die Aufnahmen werden zur Laufzeit nur lokal aus der App gelesen; es gibt keine
 Netzwerkanfragen.

@@ -13,6 +13,7 @@
     grooves: GrooveBand[];
     cuePhase?: "swing" | "lower" | null;
     liftUp?: boolean;
+    busy?: boolean;
     onSide: (index: number) => void;
     onToggle: () => void;
     onLift: () => void;
@@ -28,6 +29,7 @@
     grooves,
     cuePhase = null,
     liftUp = false,
+    busy = false,
     onSide,
     onToggle,
     onLift,
@@ -746,7 +748,7 @@
       class="cue-lever-button"
       type="button"
       aria-pressed={liftUp}
-      aria-disabled={!active}
+      aria-disabled={!active || busy}
       aria-label={liftUp ? "Tonarm senken" : "Tonarm anheben"}
       title={liftUp ? "Tonarm senken (Weiter)" : "Tonarm anheben (Pause)"}
       style:left={`${leverBaseX - armLengthPx * 0.03}px`}
@@ -763,9 +765,13 @@
       class:ready={!!album && !loading}
       class:playing={active}
       type="button"
-      disabled={!album}
+      disabled={!album || busy}
       onclick={onToggle}
-      title={active ? "Wiedergabe stoppen, Arm in die Ablage" : "Platte starten"}
+      title={busy
+        ? "Tonarm bewegt sich"
+        : active
+          ? "Wiedergabe stoppen, Arm in die Ablage"
+          : "Platte starten"}
     >
       <span class="primary">{active ? "STOP" : "START"}</span>
       <span class="sub">{active ? "START" : "STOP"}</span>
