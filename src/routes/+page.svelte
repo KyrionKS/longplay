@@ -201,6 +201,16 @@
 
   const ready = $derived(!!loadedState && !loadedState.loading);
 
+  $effect(() => {
+    if (!armMoving) return;
+    // Safety net: a stuck backend answer must not lock the whole deck.
+    const timer = setTimeout(() => {
+      armMoving = false;
+      armHold = false;
+    }, 4000);
+    return () => clearTimeout(timer);
+  });
+
   const paused = $derived(
     !!loadedState &&
       !loadedState.playing &&
@@ -240,16 +250,19 @@
     liftUp = false;
     armMoving = true;
     armHold = true;
-    await stopPlayback();
-    // Lift first, then swing: hold the arm on the record for the lift, then
-    // keep the transport locked until the return has settled.
-    const token = cueToken;
+    // Schedule the release before waiting for the backend. Even if the stop
+    // command does not answer, the deck must become operable again.
     setTimeout(() => {
-      if (token === cueToken) armHold = false;
+      armHold = false;
     }, 450);
     setTimeout(() => {
-      if (token === cueToken) armMoving = false;
+      if (!cuePhase) armMoving = false;
     }, 1900);
+    try {
+      await stopPlayback();
+    } catch (error) {
+      playback.error = `Stoppen fehlgeschlagen: ${String(error)}`;
+    }
   }
 
   async function beginStart() {
