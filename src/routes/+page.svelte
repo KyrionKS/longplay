@@ -27,6 +27,7 @@
   let startPending = $state(false);
   let liftUp = $state(false);
   let armMoving = $state(false);
+  let armHold = $state(false);
 
   const collator = new Intl.Collator("de", { sensitivity: "base" });
 
@@ -191,6 +192,7 @@
     cuePhase = null;
     startPending = false;
     armMoving = false;
+    armHold = false;
   }
 
   const ready = $derived(!!loadedState && !loadedState.loading);
@@ -230,13 +232,17 @@
     cancelCue();
     liftUp = false;
     armMoving = true;
+    armHold = true;
     await stopPlayback();
-    // The arm swings home at the slower easing; keep the transport locked
-    // until it has settled.
+    // Lift first, then swing: hold the arm on the record for the lift, then
+    // keep the transport locked until the return has settled.
     const token = cueToken;
     setTimeout(() => {
+      if (token === cueToken) armHold = false;
+    }, 450);
+    setTimeout(() => {
       if (token === cueToken) armMoving = false;
-    }, 1500);
+    }, 1900);
   }
 
   async function beginStart() {
@@ -314,6 +320,7 @@
       cuePhase={cuePhase}
       liftUp={liftUp}
       busy={armMoving}
+      hold={armHold}
       onSide={changeSide}
       onToggle={toggle}
       onLift={toggleLift}

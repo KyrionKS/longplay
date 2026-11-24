@@ -14,6 +14,7 @@
     cuePhase?: "swing" | "lower" | null;
     liftUp?: boolean;
     busy?: boolean;
+    hold?: boolean;
     onSide: (index: number) => void;
     onToggle: () => void;
     onLift: () => void;
@@ -31,6 +32,7 @@
     cuePhase = null,
     liftUp = false,
     busy = false,
+    hold = false,
     onSide,
     onToggle,
     onLift,
@@ -145,6 +147,7 @@
     if (cueHold) return cueHold.phi;
     if (!album || !side || !playback || !playback.loaded || loading) return REST_PHI;
     if (cuePhase) return cueTargetPhi;
+    if (hold) return holdPhi;
     if (stopped) return REST_PHI;
     if (atEnd) return REST_PHI;
     if (!armPlaced && !playing) return REST_PHI;
@@ -152,6 +155,11 @@
   });
 
   let armPhi = $state(REST_PHI);
+  let holdPhi = $state(REST_PHI);
+
+  $effect.pre(() => {
+    if (hold) holdPhi = untrack(() => armPhi);
+  });
 
   const homing = $derived(
     (stopped || atEnd || loading) &&
@@ -177,7 +185,7 @@
     const loop = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      const tau = target > platterVelocity ? 0.5 : 2.4;
+      const tau = target > platterVelocity ? 0.5 : 0.8;
       platterVelocity +=
         (target - platterVelocity) * (1 - Math.exp(-dt / tau));
       untrack(() => {
